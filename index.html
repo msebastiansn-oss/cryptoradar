@@ -1,0 +1,2619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-title" content="CryptoRadar">
+<title>CryptoRadar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #080808; --surface: #111111; --surface2: #1a1a1a;
+    --border: #222222; --text: #f0f0f0; --muted: #555555; --muted2: #333333;
+    --green: #00e676; --red: #ff1744; --yellow: #ffd600; --white: #ffffff;
+    --font-display: 'Syne', sans-serif; --font-mono: 'DM Mono', monospace;
+  }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--font-display); min-height: 100vh; overflow-x: hidden; }
+
+  /* SPLASH */
+  #splash { position: fixed; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; transition: opacity 0.6s ease; }
+  #splash.hide { opacity: 0; pointer-events: none; }
+  .splash-logo { font-size: 2rem; font-weight: 800; letter-spacing: -1px; color: #fff; }
+  .splash-logo span { color: var(--yellow); }
+  .splash-sub { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); margin-top: 8px; letter-spacing: 3px; text-transform: uppercase; }
+  .splash-bar { width: 120px; height: 2px; background: var(--muted2); margin-top: 40px; border-radius: 2px; overflow: hidden; }
+  .splash-bar-inner { height: 100%; width: 0%; background: var(--yellow); animation: loadbar 1.8s ease forwards; }
+  @keyframes loadbar { to { width: 100%; } }
+
+  /* ONBOARDING */
+  #onboarding { display: none; position: fixed; inset: 0; background: #000; z-index: 900; flex-direction: column; align-items: center; justify-content: center; padding: 32px; }
+  #onboarding.active { display: flex; }
+  .ob-title { font-size: 2rem; font-weight: 800; text-align: center; line-height: 1.1; margin-bottom: 16px; }
+  .ob-title span { color: var(--yellow); }
+  .ob-desc { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); text-align: center; line-height: 1.7; max-width: 280px; margin-bottom: 40px; }
+  .ob-btn { background: var(--yellow); color: #000; border: none; padding: 16px 40px; font-family: var(--font-display); font-weight: 700; font-size: 1rem; border-radius: 4px; cursor: pointer; width: 100%; max-width: 280px; transition: transform 0.1s, opacity 0.1s; }
+  .ob-btn:active { transform: scale(0.97); opacity: 0.9; }
+
+  /* APP */
+  #app { display: none; flex-direction: column; min-height: 100vh; }
+  #app.active { display: flex; }
+
+  /* HEADER */
+  header { padding: 16px 20px 12px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--bg); z-index: 50; border-bottom: 1px solid var(--border); }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .logo { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px; }
+  .logo span { color: var(--yellow); }
+  .donate-inline { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .donate-inline-btn { background: none; border: none; color: var(--muted); font-family: var(--font-mono); font-size: 0.6rem; cursor: pointer; letter-spacing: 1px; padding: 0; transition: color 0.2s; }
+  .donate-inline-btn:hover, .donate-inline-btn:active { color: var(--yellow); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .fear-badge { font-family: var(--font-mono); font-size: 0.62rem; padding: 4px 8px; border-radius: 2px; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; }
+  .fear-badge.greed { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+  .fear-badge.fear { background: rgba(255,23,68,0.15); color: var(--red); border: 1px solid rgba(255,23,68,0.3); }
+  .fear-badge.neutral { background: rgba(255,214,0,0.15); color: var(--yellow); border: 1px solid rgba(255,214,0,0.3); }
+
+  /* CONTENT */
+  .page { display: none; padding: 16px 20px; animation: fadein 0.3s ease; }
+  .page.active { display: block; }
+  @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* SECTION LABEL */
+  .section-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+  /* LAST UPDATE */
+  .last-update { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted2); margin-bottom: 10px; text-align: right; }
+  .last-update span { color: var(--yellow); }
+
+  /* FEAR & GREED */
+  .fg-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
+  .fg-number { font-size: 3.5rem; font-weight: 800; line-height: 1; min-width: 80px; text-align: center; }
+  .fg-number.green { color: var(--green); }
+  .fg-number.red { color: var(--red); }
+  .fg-number.yellow { color: var(--yellow); }
+  .fg-info { flex: 1; }
+  .fg-label { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .fg-desc { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); line-height: 1.5; }
+  .fg-bar-wrap { height: 4px; background: var(--muted2); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  .fg-bar { height: 100%; border-radius: 2px; transition: width 1s ease; }
+
+  /* CRYPTO CARD */
+  .crypto-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; display: grid; grid-template-columns: 18px 28px minmax(0,1fr) auto; align-items: center; gap: 10px; transition: border-color 0.2s, background 0.2s; cursor: pointer; }
+  .crypto-card:active { background: var(--surface2); border-color: var(--muted2); }
+  .crypto-rank { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); min-width: 16px; text-align: center; }
+  .crypto-icon { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; overflow: hidden; background: var(--surface2); display: flex; align-items: center; justify-content: center; }
+  .crypto-icon img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+  .crypto-icon-fallback { font-size: 0.75rem; font-family: var(--font-mono); color: var(--muted); }
+  .crypto-info { min-width: 0; }
+  .crypto-name-row { display:flex; align-items:center; gap:6px; min-width:0; }
+  .crypto-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .crypto-meta-row { display:flex; align-items:center; gap:6px; margin-top:2px; min-height:15px; }
+  .crypto-sym { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); }
+  .crypto-right { text-align: right; flex-shrink: 0; min-width: 86px; }
+  .crypto-price { font-family: var(--font-mono); font-weight: 500; font-size: 0.88rem; white-space: nowrap; }
+  .crypto-change { font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; margin-top: 2px; white-space: nowrap; }
+  .crypto-change.up { color: var(--green); }
+  .crypto-change.down { color: var(--red); }
+  .crypto-change.flat { color: var(--yellow); }
+  .crypto-wallets { display:inline-flex; align-items:center; gap:3px; min-height:14px; opacity:0.72; }
+  .crypto-wallet-mini { width:12px; height:12px; border-radius:50%; object-fit:cover; opacity:0.85; border:1px solid rgba(255,255,255,0.08); background:var(--surface2); }
+  .crypto-wallet-all { font-family:var(--font-mono); font-size:0.48rem; color:var(--yellow); border:1px solid rgba(255,214,0,0.26); background:rgba(255,214,0,0.06); border-radius:10px; padding:1px 4px; letter-spacing:0.5px; white-space:nowrap; }
+  @media (max-width: 380px) {
+    .crypto-card { grid-template-columns: 14px 26px minmax(0,1fr) auto; gap: 8px; padding: 11px 12px; }
+    .crypto-icon, .crypto-icon img { width:26px; height:26px; }
+    .crypto-name { font-size:0.84rem; }
+    .crypto-price { font-size:0.82rem; }
+    .crypto-right { min-width:78px; }
+  }
+
+  /* NEWS */
+  .news-card { border-bottom: 1px solid var(--border); padding: 14px 0; }
+  .news-card:last-child { border-bottom: none; }
+  .news-tag { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--yellow); margin-bottom: 5px; }
+  .news-title { font-size: 0.9rem; font-weight: 600; line-height: 1.4; margin-bottom: 5px; }
+  .news-footer { display: flex; align-items: center; justify-content: space-between; }
+  .news-meta { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); }
+  .news-link { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--muted2); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
+  .news-link:hover { color: var(--yellow); border-color: var(--yellow); }
+
+  /* LAUNCHES */
+  .launch-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 10px; }
+  .launch-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .launch-name { font-weight: 700; font-size: 0.92rem; }
+  .launch-date { font-family: var(--font-mono); font-size: 0.62rem; color: var(--yellow); background: rgba(255,214,0,0.1); padding: 2px 8px; border-radius: 2px; white-space: nowrap; }
+  .launch-desc { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); line-height: 1.6; }
+
+  /* FAVORITOS */
+  #page-favoritos .lock-overlay { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 32px 20px; text-align: center; margin-bottom: 20px; }
+  .lock-icon { font-size: 2.5rem; margin-bottom: 12px; }
+  .lock-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+  .lock-desc { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); line-height: 1.6; margin-bottom: 20px; }
+  .share-btn { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); padding: 12px 24px; font-family: var(--font-display); font-weight: 700; font-size: 0.85rem; border-radius: 4px; cursor: pointer; width: 100%; transition: background 0.2s, color 0.2s; }
+  .share-btn:active { background: var(--yellow); color: #000; }
+  .share-count { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); margin-top: 10px; }
+  .share-count span { color: var(--yellow); }
+  .fav-grid { display: flex; flex-direction: column; gap: 8px; }
+  .fav-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+  .fav-item-icon { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+  .fav-item-icon img { width: 28px; height: 28px; }
+  .fav-item-info { flex: 1; }
+  .fav-item-name { font-weight: 700; font-size: 0.9rem; }
+  .fav-item-price { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+  .fav-item-change { font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; }
+  .remove-fav { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 4px; }
+
+  /* COUNTER */
+  .counter-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .counter-label { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .counter-num { font-family: var(--font-mono); font-size: 0.72rem; color: var(--white); font-weight: 500; }
+  .counter-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+
+  /* SKELETON */
+  .skeleton { background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .skel-card { height: 60px; margin-bottom: 8px; border-radius: 8px; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: flex-end; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px 12px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 480px; animation: slideup 0.3s ease; max-height: 90vh; overflow-y: auto; }
+  @keyframes slideup { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-handle { width: 40px; height: 4px; background: var(--muted2); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .modal-coin-img { width: 36px; height: 36px; border-radius: 50%; }
+  .modal-name { font-size: 1.4rem; font-weight: 800; }
+  .modal-price { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 500; margin-bottom: 16px; }
+  .modal-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .modal-stat { background: var(--surface2); border-radius: 6px; padding: 12px; }
+  .modal-stat-label { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .modal-stat-val { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 500; }
+
+  /* WALLETS EN MODAL */
+  .modal-wallets { margin-bottom: 16px; }
+  .modal-wallets-label { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .wallet-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .wallet-chip { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--text); }
+  .wallet-chip-icon { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; }
+
+  .modal-fav-btn { width: 100%; padding: 14px; border: 1px solid var(--yellow); background: transparent; color: var(--yellow); font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; border-radius: 4px; cursor: pointer; transition: background 0.2s, color 0.2s; margin-bottom: 10px; }
+  .modal-fav-btn:active { background: var(--yellow); color: #000; }
+  .modal-close { width: 100%; padding: 12px; border: 1px solid var(--muted2); background: transparent; color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; border-radius: 4px; cursor: pointer; letter-spacing: 1px; }
+
+
+
+  /* WHAT IF */
+  .whatif-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+  .whatif-kicker { font-family: var(--font-mono); font-size: 0.58rem; color: var(--yellow); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+  .whatif-title { font-size: 1.1rem; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+  .whatif-desc { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); line-height: 1.6; }
+  .whatif-balance-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .whatif-stat-label { font-family: var(--font-mono); font-size: 0.56rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; }
+  .whatif-stat-value { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 500; }
+  .whatif-stat-value.big { font-size: 1.1rem; font-family: var(--font-display); font-weight: 700; }
+  .whatif-stat-value.up { color: var(--green); }
+  .whatif-stat-value.down { color: var(--red); }
+  .whatif-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .whatif-btn { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); padding: 12px 10px; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; border-radius: 4px; cursor: pointer; }
+  .whatif-btn.secondary { border-color: var(--muted2); color: var(--muted); }
+  .whatif-btn:active { background: var(--yellow); color: #000; }
+  .whatif-btn.secondary:active { background: var(--surface2); color: var(--text); }
+  .whatif-position { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; }
+  .whatif-position-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .whatif-coin { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .whatif-coin img { width: 28px; height: 28px; border-radius: 50%; background: var(--surface2); }
+  .whatif-coin-name { font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .whatif-coin-sub { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); }
+  .whatif-pnl { font-family: var(--font-mono); font-size: 0.82rem; font-weight: 500; text-align: right; }
+  .whatif-pnl.up { color: var(--green); }
+  .whatif-pnl.down { color: var(--red); }
+  .whatif-position-data { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .whatif-mini-label { font-family: var(--font-mono); font-size: 0.52rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 2px; }
+  .whatif-mini-value { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text); }
+  .whatif-sell { width: 100%; border: 1px solid var(--muted2); background: transparent; color: var(--muted); padding: 9px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 1px; cursor: pointer; }
+  .whatif-empty { background: var(--surface); border: 1px dashed var(--muted2); border-radius: 8px; padding: 22px 16px; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); line-height: 1.6; text-align: center; margin-bottom: 12px; }
+  .whatif-market-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .whatif-market-card img { width: 26px; height: 26px; border-radius: 50%; background: var(--surface2); }
+  .whatif-market-info { flex: 1; min-width: 0; }
+  .whatif-market-name { font-weight: 700; font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .whatif-market-price { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); }
+  .whatif-buy { border: 1px solid var(--yellow); background: transparent; color: var(--yellow); padding: 8px 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.62rem; cursor: pointer; }
+  .whatif-note { font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); line-height: 1.6; margin: 10px 0 16px; }
+
+
+
+  /* VOLUME / REFRESH / WHAT IF HELP */
+  .volume-badge { display: inline-flex; align-items: center; gap: 3px; padding: 1px 5px; border-radius: 10px; font-family: var(--font-mono); font-size: 0.50rem; letter-spacing: 0.45px; vertical-align: middle; white-space: nowrap; line-height: 1.25; }
+  .volume-badge.hot { color: var(--yellow); background: rgba(255,214,0,0.10); border: 1px solid rgba(255,214,0,0.24); }
+  .volume-badge.extreme { color: var(--green); background: rgba(0,230,118,0.10); border: 1px solid rgba(0,230,118,0.24); }
+  .last-update span { color: var(--yellow); }
+  .whatif-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .whatif-help-btn { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(255,214,0,0.35); background: rgba(255,214,0,0.08); color: var(--yellow); font-family: var(--font-mono); font-weight: 700; cursor: pointer; flex-shrink: 0; }
+  .whatif-chart { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+  .whatif-chart-title { font-family: var(--font-mono); font-size: 0.56rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; display: flex; justify-content: space-between; gap: 10px; }
+  .whatif-chart-track { position: relative; height: 12px; background: var(--surface2); border-radius: 8px; overflow: hidden; }
+  .whatif-chart-mid { position: absolute; left: 50%; top: 0; width: 1px; height: 100%; background: var(--muted); opacity: 0.65; }
+  .whatif-chart-bar { position: absolute; top: 0; height: 100%; border-radius: 8px; transition: width 0.4s ease, left 0.4s ease; }
+  .whatif-chart-bar.up { left: 50%; background: var(--green); }
+  .whatif-chart-bar.down { right: 50%; background: var(--red); }
+  .whatif-chart-scale { display: flex; justify-content: space-between; margin-top: 7px; font-family: var(--font-mono); font-size: 0.54rem; color: var(--muted); }
+
+  /* NAV */
+  nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg); border-top: 1px solid var(--border); display: flex; z-index: 9999; padding-bottom: env(safe-area-inset-bottom); -webkit-transform: translateZ(0); transform: translateZ(0); will-change: transform; }
+  .nav-btn { flex: 1; padding: 10px 8px; background: none; border: none; color: var(--muted); cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: color 0.2s; -webkit-tap-highlight-color: transparent; }
+  .nav-btn.active { color: var(--yellow); }
+  .nav-btn svg { width: 20px; height: 20px; }
+  .nav-label { font-family: var(--font-mono); font-size: 0.52rem; letter-spacing: 1px; text-transform: uppercase; }
+  .main-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 80px; }
+  ::-webkit-scrollbar { width: 0; }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    display: none; position: fixed; inset: 0; background: #000;
+    z-index: 800; flex-direction: column; align-items: center;
+    justify-content: center; padding: 32px;
+  }
+  #login-screen.active { display: flex; }
+  .login-logo { font-size: 2.2rem; font-weight: 800; letter-spacing: -2px; color: #fff; margin-bottom: 6px; }
+  .login-logo span { color: var(--yellow); }
+  .login-tagline { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
+  .login-tabs { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 28px; overflow: hidden; width: 100%; max-width: 300px; }
+  .login-tab { flex: 1; padding: 10px; background: none; border: none; color: var(--muted); font-family: var(--font-mono); font-size: 0.68rem; cursor: pointer; letter-spacing: 1px; transition: background 0.2s, color 0.2s; }
+  .login-tab.active { background: var(--surface); color: var(--white); }
+  .login-form { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+  .login-input {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--font-mono); font-size: 0.9rem;
+    padding: 14px 16px; border-radius: 6px; outline: none; width: 100%;
+    -webkit-appearance: none; appearance: none;
+    transition: border-color 0.2s;
+  }
+  .login-input:focus { border-color: var(--yellow); }
+  .login-input::placeholder { color: var(--muted); }
+  .login-input[type="password"] { letter-spacing: 4px; font-size: 1.1rem; }
+  .login-submit {
+    background: var(--yellow); color: #000; border: none;
+    padding: 15px; font-family: var(--font-display); font-weight: 700;
+    font-size: 0.95rem; border-radius: 6px; cursor: pointer;
+    width: 100%; transition: opacity 0.2s; -webkit-appearance: none;
+  }
+  .login-submit:active { opacity: 0.85; }
+  .login-error { font-family: var(--font-mono); font-size: 0.68rem; color: var(--red); text-align: center; min-height: 18px; }
+  .login-footer { margin-top: 20px; font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); text-align: center; line-height: 1.6; max-width: 260px; }
+  .login-skip { margin-top: 14px; background: none; border: none; color: var(--muted); font-family: var(--font-mono); font-size: 0.62rem; cursor: pointer; letter-spacing: 1px; text-decoration: underline; }
+
+  /* AVATAR EN HEADER */
+  .user-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--yellow); color: #000; font-family: var(--font-display); font-weight: 800; font-size: 0.7rem; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+
+  /* iPhone fix: inputs */
+  input, button { -webkit-appearance: none; border-radius: 0; }
+  input[type="text"], input[type="email"], input[type="password"] { font-size: 16px; } /* evita zoom en iOS */
+
+  /* ── DONATE MODAL ── */
+  #donate-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 300; align-items: flex-end; justify-content: center; }
+  #donate-modal.open { display: flex; }
+  .donate-sheet { background: var(--surface); border: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 24px 20px 48px; width: 100%; max-width: 480px; animation: slideup 0.3s ease; }
+  .donate-handle { width: 40px; height: 4px; background: var(--muted2); border-radius: 2px; margin: 0 auto 20px; }
+  .donate-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 4px; }
+  .donate-sub { font-family: var(--font-mono); font-size: 0.7rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  .donate-qr-wrap { background: #fff; border-radius: 10px; padding: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .donate-qr-wrap img { width: 180px; height: 180px; display: block; }
+  .donate-uid-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; }
+  .donate-uid-label { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 3px; }
+  .donate-uid-num { font-family: var(--font-mono); font-size: 1.1rem; font-weight: 500; color: var(--white); letter-spacing: 2px; }
+  #copy-uid-btn { background: none; border: 1px solid var(--muted2); color: var(--muted); font-family: var(--font-mono); font-size: 0.65rem; padding: 6px 12px; border-radius: 4px; cursor: pointer; letter-spacing: 1px; transition: color 0.2s, border-color 0.2s; white-space: nowrap; }
+  .donate-coins { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .donate-coin { font-family: var(--font-mono); font-size: 0.65rem; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); }
+  .donate-coin.primary { border-color: rgba(0,230,118,0.4); color: var(--green); background: rgba(0,230,118,0.08); }
+  .donate-close { width: 100%; padding: 13px; border: 1px solid var(--muted2); background: transparent; color: var(--muted); font-family: var(--font-mono); font-size: 0.75rem; border-radius: 6px; cursor: pointer; letter-spacing: 1px; }
+
+
+  /* ── TÉRMINOS ── */
+  #terms-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1100; align-items: center; justify-content: center; padding: 24px; }
+  #terms-modal.open { display: flex; }
+  .terms-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px 24px; max-width: 360px; width: 100%; }
+  .terms-title { font-size: 1rem; font-weight: 800; margin-bottom: 14px; }
+  .terms-body { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); line-height: 1.8; margin-bottom: 20px; }
+  .terms-body strong { color: var(--text); }
+  .terms-accept { width: 100%; padding: 14px; background: var(--yellow); color: #000; border: none; font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; border-radius: 6px; cursor: pointer; }
+
+
+  .launch-link { display: inline-block; margin-top: 8px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--muted2); padding-bottom: 1px; transition: color 0.2s, border-color 0.2s; }
+  .launch-link:hover { color: var(--yellow); border-color: var(--yellow); }
+
+
+  /* ── NOTIFICACIONES ── */
+  .notif-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .notif-card-title { font-weight: 700; font-size: 0.9rem; margin-bottom: 4px; }
+  .notif-card-desc { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
+  .notif-toggle { display: flex; align-items: center; justify-content: space-between; }
+  .notif-toggle-label { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text); }
+  .toggle-switch { position: relative; width: 44px; height: 24px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: var(--muted2); border-radius: 24px; cursor: pointer; transition: background 0.2s; }
+  .toggle-slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--yellow); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+  .notif-note { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+
+  /* ── INSTALL BANNER ── */
+  #install-banner {
+    display: none; position: fixed; bottom: 80px; left: 12px; right: 12px;
+    background: var(--surface); border: 1px solid rgba(255,214,0,0.3);
+    border-radius: 10px; padding: 14px 16px; z-index: 100;
+    align-items: center; gap: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  .install-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .install-text { flex: 1; }
+  .install-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+  .install-sub { font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted); }
+  .install-btn { background: var(--yellow); color: #000; border: none; padding: 8px 14px; font-family: var(--font-display); font-weight: 700; font-size: 0.75rem; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+  .install-close { background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer; padding: 4px; flex-shrink: 0; }
+
+
+  /* ── LANG SCREEN ── */
+  #lang-screen { display: none; position: fixed; inset: 0; background: #000; z-index: 950; flex-direction: column; align-items: center; justify-content: center; padding: 32px; }
+  #lang-screen.active { display: flex; }
+  .lang-logo { font-size: 2rem; font-weight: 800; letter-spacing: -1px; color: #fff; margin-bottom: 6px; }
+  .lang-logo span { color: var(--yellow); }
+  .lang-title { font-size: 1.3rem; font-weight: 800; text-align: center; margin-bottom: 8px; }
+  .lang-sub { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); margin-bottom: 40px; text-align: center; }
+  .lang-options { display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 300px; }
+  .lang-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: border-color 0.2s, background 0.2s; width: 100%; }
+  .lang-btn:active { border-color: var(--yellow); background: var(--surface2); }
+  .lang-flag { font-size: 1.8rem; }
+  .lang-info { text-align: left; }
+  .lang-name { font-size: 1rem; font-weight: 700; }
+  .lang-native { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+
+
+  /* ── OFFLINE BANNER ── */
+  #offline-banner { display: none; background: rgba(255,23,68,0.15); border: 1px solid rgba(255,23,68,0.3); border-radius: 6px; padding: 8px 14px; margin: 0 20px 10px; font-family: var(--font-mono); font-size: 0.65rem; color: var(--red); text-align: center; }
+  #offline-banner.show { display: block; }
+
+
+  /* ── ALERT BADGE ── */
+  .crypto-alert { font-family: var(--font-mono); font-size: 0.55rem; padding: 2px 6px; border-radius: 3px; margin-top: 3px; display: inline-block; font-weight: 600; letter-spacing: 0.5px; }
+  .crypto-alert.big-up { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+  .crypto-alert.big-down { background: rgba(255,23,68,0.15); color: var(--red); border: 1px solid rgba(255,23,68,0.3); }
+
+  /* ── HISTORIAL WHAT IF ── */
+  .whatif-history-item { background: var(--surface2); border-radius: 6px; padding: 10px 12px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .whatif-history-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--muted); }
+  .whatif-history-val { font-family: var(--font-mono); font-size: 0.75rem; font-weight: 500; }
+
+  /* ── COMPARAR ── */
+  .compare-section { margin-top: 12px; }
+  .compare-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .compare-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .compare-title { font-size: 0.85rem; font-weight: 700; }
+  .compare-selects { display: flex; gap: 6px; margin-bottom: 8px; }
+  .compare-select { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 0.6rem; padding: 6px 4px; border-radius: 4px; -webkit-appearance: none; min-width: 0; }
+  .compare-result { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .compare-coin-box { background: var(--surface2); border-radius: 6px; padding: 8px 6px; text-align: center; }
+  .compare-coin-name { font-family: var(--font-mono); font-size: 0.55rem; color: var(--muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .compare-coin-chg { font-size: 0.9rem; font-weight: 800; }
+  .compare-coin-price { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); margin-top: 2px; }
+  .compare-winner { border: 1px solid rgba(0,230,118,0.4); }
+
+  /* ── CALCULADORA EN MODAL ── */
+  .modal-calc { margin-bottom: 14px; }
+  .modal-calc-label { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+  .modal-calc-row { display: flex; gap: 8px; align-items: center; }
+  .modal-calc-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; padding: 10px 12px; border-radius: 6px; outline: none; -webkit-appearance: none; }
+  .modal-calc-input:focus { border-color: var(--yellow); }
+  .modal-calc-result { font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); margin-top: 6px; min-height: 18px; }
+  .modal-calc-result span { color: var(--yellow); font-weight: 500; }
+
+
+  /* ── MARKET SUB-TABS ── */
+  .market-subtabs { display: flex; gap: 0; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .market-subtab { flex: 1; padding: 8px 4px; background: none; border: none; color: var(--muted); font-family: var(--font-mono); font-size: 0.6rem; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
+  .market-subtab.active { background: var(--surface); color: var(--white); }
+  .market-subtab.gainers.active { color: var(--green); }
+  .market-subtab.losers.active { color: var(--red); }
+
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash">
+  <div class="splash-logo">Crypto<span>Radar</span></div>
+  <div class="splash-sub">Mercado en tiempo real</div>
+  <div class="splash-bar"><div class="splash-bar-inner"></div></div>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-title">Todo lo que necesitás saber de <span>cripto</span>, de un vistazo.</div>
+  <div class="ob-desc">Precios en vivo, tendencias, próximos lanzamientos y el sentimiento del mercado. Gratis. Sin cuenta. Sin complicaciones.</div>
+  <button class="ob-btn" onclick="startApp()">ENTRAR →</button>
+</div>
+
+<!-- LANG SCREEN -->
+<div id="lang-screen">
+  <div class="lang-logo">Crypto<span>Radar</span></div>
+  <div style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:40px">Mercado en tiempo real</div>
+  <div class="lang-title" id="lang-screen-title">Elegí tu idioma</div>
+  <div class="lang-sub" id="lang-screen-sub">Choose your language</div>
+  <div class="lang-options">
+    <button class="lang-btn" onclick="chooseLang('es')">
+      <div class="lang-flag">🇪🇸</div>
+      <div class="lang-info">
+        <div class="lang-name">Español</div>
+        <div class="lang-native">España · Latinoamérica</div>
+      </div>
+    </button>
+    <button class="lang-btn" onclick="chooseLang('en')">
+      <div class="lang-flag">🇺🇸</div>
+      <div class="lang-info">
+        <div class="lang-name">English</div>
+        <div class="lang-native">United States · Global</div>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-logo">Crypto<span>Radar</span></div>
+  <div class="login-tagline">Tu radar de mercado</div>
+  <div class="login-tabs">
+    <button class="login-tab active" onclick="switchLoginTab('login', this)">Entrar</button>
+    <button class="login-tab" onclick="switchLoginTab('register', this)">Crear cuenta</button>
+  </div>
+  <div class="login-form" id="login-form-login">
+    <input class="login-input" type="text" id="login-user" placeholder="Usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input class="login-input" type="password" id="login-pin" placeholder="PIN (4 digitos)" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+    <div class="login-error" id="login-error"></div>
+    <button class="login-submit" onclick="doLogin()">ENTRAR</button>
+  </div>
+  <div class="login-form" id="login-form-register" style="display:none">
+    <input class="login-input" type="text" id="reg-user" placeholder="Elegí un usuario" autocomplete="username" autocapitalize="none" spellcheck="false">
+    <input class="login-input" type="password" id="reg-pin" placeholder="PIN de 4 digitos" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+    <input class="login-input" type="password" id="reg-pin2" placeholder="Repetí el PIN" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+    <div class="login-error" id="reg-error"></div>
+    <button class="login-submit" onclick="doRegister()">CREAR CUENTA</button>
+  </div>
+  <div class="login-footer">Tus datos se guardan solo en este dispositivo.<br>Sin servidor. Sin emails. Sin datos personales.</div>
+  <button class="login-skip" onclick="skipLogin()">Entrar sin cuenta</button>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="header-left">
+      <div class="logo">Crypto<span>Radar</span></div>
+      <div class="donate-inline">
+        <button class="donate-inline-btn" onclick="openDonate()">☕ Invitanos un café · $1 USD</button>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="fear-badge neutral" id="fear-badge">— —</div>
+      <div class="user-avatar" id="user-avatar" onclick="showUserMenu()" title="Perfil">?</div>
+    </div>
+  </header>
+
+  <div id="offline-banner">📡 Sin conexión — mostrando últimos datos disponibles</div>
+  <div class="main-scroll">
+
+    <!-- MERCADO -->
+    <div id="page-mercado" class="page">
+      <div class="market-subtabs">
+        <button class="market-subtab active" id="subtab-top" onclick="switchMarketTab('top', this)">🏆 Top</button>
+        <button class="market-subtab gainers" id="subtab-gainers" onclick="switchMarketTab('gainers', this)">🚀 Ganadores</button>
+        <button class="market-subtab losers" id="subtab-losers" onclick="switchMarketTab('losers', this)">💥 Perdedores</button>
+      </div>
+      <div class="last-update refresh-countdown" id="last-update-time">Actualizando...</div>
+      <div id="crypto-list">
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+      </div>
+    </div>
+
+    <!-- TENDENCIAS -->
+    <div id="page-tendencias" class="page">
+      <div class="section-label">Sentimiento del mercado</div>
+      <div class="last-update refresh-countdown">Actualizando...</div>
+      <div class="fg-card" id="fg-card">
+        <div class="fg-number yellow" id="fg-num">—</div>
+        <div class="fg-info">
+          <div class="fg-label" id="fg-label">Cargando...</div>
+          <div class="fg-desc" id="fg-desc">Consultando índice Fear & Greed...</div>
+          <div class="fg-bar-wrap"><div class="fg-bar" id="fg-bar" style="width:0%;background:var(--yellow)"></div></div>
+        </div>
+      </div>
+      <div class="compare-section">
+        <div class="section-label">Comparar criptos</div>
+        <div class="compare-card">
+          <div class="compare-selects">
+            <select class="compare-select" id="compare-a" onchange="renderCompare()">
+              <option value="">Cripto A</option>
+            </select>
+            <select class="compare-select" id="compare-b" onchange="renderCompare()">
+              <option value="">Cripto B</option>
+            </select>
+          </div>
+          <div class="compare-result" id="compare-result">
+            <div class="compare-coin-box" style="grid-column:1/-1;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">Seleccioná dos criptos para comparar</div>
+          </div>
+        </div>
+      </div>
+      <div class="section-label" style="margin-top:12px">Análisis & Tendencias</div>
+      <div id="trending-extra"></div>
+      <div id="news-list">
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+      </div>
+    </div>
+
+    <!-- PRÓXIMOS -->
+    <div id="page-lanzamientos" class="page">
+      <div class="section-label">Próximos eventos cripto</div>
+      <div class="last-update refresh-countdown">Actualizando...</div>
+      <div id="launch-list">
+        <div class="skeleton skel-card"></div>
+        <div class="skeleton skel-card"></div>
+      </div>
+    </div>
+
+    <!-- FAVORITOS -->
+    <div id="page-favoritos" class="page">
+      <div class="section-label">Mis Cryptos</div>
+      <div class="last-update refresh-countdown">Actualizando...</div>
+      <div id="fav-locked">
+        <div class="lock-overlay">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-title">Desbloqueá Mis Cryptos</div>
+          <div class="lock-desc">Seguí tus criptomonedas favoritas y recibí alertas de movimientos. Compartí la app con 3 amigos para desbloquear esta función.</div>
+          <button class="share-btn" onclick="tryShare()">Compartir con amigos →</button>
+          <div class="share-count" id="share-count">Compartiste con <span id="share-num">0</span>/3 amigos</div>
+        </div>
+      </div>
+      <div id="fav-unlocked" style="display:none">
+        <div class="section-label">Tus criptomonedas</div>
+        <div class="fav-grid" id="fav-grid"></div>
+        <div style="margin-top:16px; font-family:var(--font-mono); font-size:0.7rem; color:var(--muted)">
+          Tocá cualquier cripto en Mercado para agregarla a favoritos.
+        </div>
+      </div>
+
+      <!-- Notificaciones -->
+      <div class="notif-card" style="margin-top:20px">
+        <div class="notif-card-title">🔔 Notificación diaria</div>
+        <div class="notif-card-desc">Recibí un resumen de tu simulación What If todos los días al mediodía.</div>
+        <div class="notif-toggle">
+          <span class="notif-toggle-label">Activar notificación a las 12:00</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif-toggle" onchange="toggleNotification(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="notif-note">⚠️ En iPhone solo funciona si instalás CryptoRadar en tu pantalla de inicio (Safari → Compartir → Agregar a inicio).</div>
+      </div>
+    </div>
+
+    <!-- WHAT IF -->
+    <div id="page-whatif" class="page active">
+      <div class="section-label">Simulador lúdico</div>
+      <div class="last-update refresh-countdown">Actualizando...</div>
+      <div class="whatif-hero">
+        <div class="whatif-kicker">What If?</div>
+        <div class="whatif-title-row"><div class="whatif-title">Jugá a ser trader</div><button class="whatif-help-btn" onclick="showCryptoGlossary()" title="Glosario cripto básico">?</button></div>
+        <div class="whatif-desc">Usá dólares ficticios para simular compras con precios reales. No es inversión real, es un juego para ver qué hubiera pasado.</div>
+      </div>
+
+      <div class="whatif-balance-card">
+        <div>
+          <div class="whatif-stat-label">Disponible</div>
+          <div class="whatif-stat-value big" id="whatif-cash">$1000</div>
+        </div>
+        <div>
+          <div class="whatif-stat-label">Portfolio</div>
+          <div class="whatif-stat-value big" id="whatif-total">$1000</div>
+        </div>
+        <div>
+          <div class="whatif-stat-label">Invertido</div>
+          <div class="whatif-stat-value" id="whatif-invested">$0</div>
+        </div>
+        <div>
+          <div class="whatif-stat-label">Resultado</div>
+          <div class="whatif-stat-value" id="whatif-pnl">$0</div>
+        </div>
+      </div>
+
+      <div class="whatif-chart" id="whatif-chart"></div>
+
+      <div class="whatif-actions">
+        <button class="whatif-btn" onclick="whatIfRecharge()">☕ +$1000 virtuales</button>
+        <button class="whatif-btn secondary" onclick="whatIfReset()">Reiniciar juego</button>
+      </div>
+
+      <div class="whatif-note">
+        Podés sumar $1000 virtuales todas las veces que quieras. Es gratis y se guarda solo en este dispositivo. Si CryptoRadar te divierte o te sirve, se agradece un cafecito ☕, pero no es obligatorio. Si borrás datos del navegador o desinstalás la app, el progreso se pierde y podés volver a empezar.
+      </div>
+
+      <div class="section-label">Tus posiciones</div>
+      <div id="whatif-positions"></div>
+
+      <div class="section-label" style="margin-top:18px">Historial de operaciones</div>
+      <div id="whatif-history-list" style="margin-bottom:16px"></div>
+      <div class="section-label" style="margin-top:4px">Comprar con saldo ficticio</div>
+      <div id="whatif-market"></div>
+    </div>
+
+
+  </div>
+
+  <!-- COUNTER -->
+  <div class="counter-bar">
+    <div class="counter-label">Usuarios activos</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="counter-dot"></div>
+      <div class="counter-num" id="user-count">—</div>
+    </div>
+  </div>
+
+  <!-- NAV BOTTOM -->
+  <nav>
+    <button class="nav-btn active" id="nav-whatif" onclick="showPage('whatif', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span class="nav-label">What If</span>
+    </button>
+    <button class="nav-btn" id="nav-mercado" onclick="showPage('mercado', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-label">Mercado</span>
+    </button>
+    <button class="nav-btn" id="nav-tendencias" onclick="showPage('tendencias', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="nav-label">Tendencias</span>
+    </button>
+    <button class="nav-btn" id="nav-lanzamientos" onclick="showPage('lanzamientos', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <span class="nav-label">Próximos</span>
+    </button>
+    <button class="nav-btn" id="nav-favoritos" onclick="showPage('favoritos', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span class="nav-label">Mis Cryptos</span>
+    </button>
+
+  </nav>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <img class="modal-coin-img" id="modal-img" src="" alt="">
+      <div class="modal-name" id="modal-name">—</div>
+    </div>
+    <div class="modal-price" id="modal-price">—</div>
+    <div class="modal-stats">
+      <div class="modal-stat">
+        <div class="modal-stat-label">24h Cambio</div>
+        <div class="modal-stat-val" id="modal-change">—</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">Cap. de mercado</div>
+        <div class="modal-stat-val" id="modal-mcap">—</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">Volumen 24h</div>
+        <div class="modal-stat-val" id="modal-vol">—</div>
+      </div>
+      <div class="modal-stat">
+        <div class="modal-stat-label">Rank global</div>
+        <div class="modal-stat-val" id="modal-rank">—</div>
+      </div>
+    </div>
+    <div class="modal-calc">
+      <div class="modal-calc-label">Calculadora rápida</div>
+      <div class="modal-calc-row">
+        <input class="modal-calc-input" type="number" id="modal-calc-usd" placeholder="USD" inputmode="decimal" oninput="calcConvert()">
+      </div>
+      <div class="modal-calc-result" id="modal-calc-result">Ingresá un monto en USD</div>
+    </div>
+    <div class="modal-wallets">
+      <div class="modal-wallets-label">Disponible en</div>
+      <div class="wallet-chips" id="modal-wallets"></div>
+    </div>
+    <button class="modal-fav-btn" id="modal-fav-btn" onclick="toggleFav()">☆ Agregar a favoritos</button>
+    <button class="modal-close" onclick="closeModal()">CERRAR</button>
+  </div>
+</div>
+
+<script>
+// ══ WALLETS DATA ══
+const WALLET_LOGOS = {
+  binance:   { name: 'Binance',   logo: 'https://assets.coingecko.com/markets/images/52/small/binance.jpg' },
+  coinbase:  { name: 'Coinbase',  logo: 'https://assets.coingecko.com/markets/images/23/small/Coinbase_Coin_Primary.png' },
+  kraken:    { name: 'Kraken',    logo: 'https://assets.coingecko.com/markets/images/29/small/kraken.jpg' },
+  metamask:  { name: 'MetaMask', logo: 'https://upload.wikimedia.org/wikipedia/commons/3/36/MetaMask_Fox.svg' },
+  trust:     { name: 'Trust',     logo: 'https://assets.coingecko.com/coins/images/25/small/BNB.png' },
+  bybit:     { name: 'Bybit',     logo: 'https://assets.coingecko.com/markets/images/698/small/bybit_spot.png' },
+  okx:       { name: 'OKX',       logo: 'https://assets.coingecko.com/markets/images/96/small/WeChat_Image_20220117220452.png' },
+  kucoin:    { name: 'KuCoin',    logo: 'https://assets.coingecko.com/markets/images/61/small/kucoin.png' },
+};
+
+// Mapa de wallets por coin
+const COIN_WALLETS = {
+  bitcoin:           ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  ethereum:          ['binance','coinbase','kraken','metamask','bybit','okx','kucoin'],
+  tether:            ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  'binancecoin':     ['binance','bybit','trust'],
+  solana:            ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  'usd-coin':        ['binance','coinbase','kraken','bybit','okx'],
+  ripple:            ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  dogecoin:          ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  cardano:           ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  tron:              ['binance','bybit','okx','kucoin'],
+  avalanche:         ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  polkadot:          ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  chainlink:         ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  'shiba-inu':       ['binance','coinbase','bybit','okx','kucoin'],
+  litecoin:          ['binance','coinbase','kraken','bybit','okx','kucoin'],
+  'wrapped-bitcoin': ['binance','coinbase','metamask','okx'],
+  'matic-network':   ['binance','coinbase','kraken','metamask','bybit','okx','kucoin'],
+  uniswap:           ['binance','coinbase','metamask','bybit','okx','kucoin'],
+  'internet-computer':['binance','coinbase','bybit','okx','kucoin'],
+  'ethereum-classic':['binance','coinbase','kraken','bybit','okx','kucoin'],
+};
+
+const CORE_TRADE_WALLETS = ['binance','coinbase','kraken','bybit','okx','kucoin'];
+
+function getWalletsForCoin(coinId) {
+  return COIN_WALLETS[coinId] || ['binance','coinbase','kraken'];
+}
+
+
+function renderVolumeBadge(c) {
+  const marketCap = Number(c.market_cap || 0);
+  const volume = Number(c.total_volume || 0);
+  if (!marketCap || !volume) return '';
+
+  const ratio = volume / marketCap;
+
+  if (ratio >= 0.25) {
+    return `<span class="volume-badge extreme" title="Volumen 24h muy alto relativo a esta cripto">🚀 VOL</span>`;
+  }
+  if (ratio >= 0.10) {
+    return `<span class="volume-badge hot" title="Volumen 24h alto relativo a esta cripto">🔥 VOL</span>`;
+  }
+  return '';
+}
+
+function renderMarketWallets(coinId) {
+  const wallets = getWalletsForCoin(coinId);
+  const isEverywhere = CORE_TRADE_WALLETS.every(w => wallets.includes(w));
+  if (isEverywhere) {
+    return `<div class="crypto-wallets" title="Disponible en las principales wallets/exchanges"><span class="crypto-wallet-all">ALL</span></div>`;
+  }
+  return `<div class="crypto-wallets">${wallets.slice(0,4).map(w => {
+    const data = WALLET_LOGOS[w];
+    if (!data) return '';
+    return `<img class="crypto-wallet-mini" src="${data.logo}" alt="${data.name}" title="${data.name}" loading="lazy" onerror="this.style.display='none'">`;
+  }).join('')}</div>`;
+}
+
+// ══ CONFIG ══
+const PUBLIC_APP_URL = 'https://msebastiansn-oss.github.io/cryptoradar/';
+const MARKET_CACHE_KEY = 'cryptoradar-last-market-data';
+const MARKET_UPDATE_CACHE_KEY = 'cryptoradar-last-market-update';
+const FEAR_GREED_CACHE_KEY = 'cryptoradar-last-fear-greed-data';
+const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+let nextUpdateAt = null;
+let refreshCountdownTimer = null;
+
+function loadWhatIfState() {
+  const fallback = { cash: 1000, positions: [], totalInjected: 1000 };
+  try {
+    const saved = JSON.parse(localStorage.getItem('whatif-state') || 'null');
+    if (!saved || typeof saved !== 'object') return fallback;
+    return {
+      cash: typeof saved.cash === 'number' ? saved.cash : 1000,
+      positions: Array.isArray(saved.positions) ? saved.positions : [],
+      // Capital ficticio entregado al jugador. Sirve para que las recargas no cuenten como ganancia.
+      totalInjected: typeof saved.totalInjected === 'number' ? saved.totalInjected : 1000
+    };
+  } catch(e) {
+    return fallback;
+  }
+}
+
+// ══ STATE ══
+const STATE = {
+  cryptos: [],
+  fearGreed: null,
+  favs: JSON.parse(localStorage.getItem('favs') || '[]'),
+  shareCount: parseInt(localStorage.getItem('shareCount') || '0'),
+  unlocked: localStorage.getItem('unlocked') === 'true',
+  lastUpdate: null,
+  whatIf: loadWhatIfState(),
+};
+
+// ══ INIT ══
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    // Apply saved language first
+    applyLang();
+    // Show lang selection if first time
+    if (!localStorage.getItem('cr-lang-chosen')) {
+      document.getElementById('lang-screen').classList.add('active');
+      return;
+    }
+    const session = getCurrentUser();
+    if (session) {
+      // Already logged in
+      if (session.isGuest) {
+        proceedAfterLogin(true);
+      } else {
+        const db = getDB();
+        const userData = db[session.user];
+        if (userData) {
+          if (userData.favs) STATE.favs = userData.favs;
+          if (typeof userData.unlocked !== 'undefined') STATE.unlocked = userData.unlocked;
+          if (typeof userData.shareCount !== 'undefined') STATE.shareCount = userData.shareCount;
+          if (userData.whatif) STATE.whatIf = userData.whatif;
+        }
+        proceedAfterLogin(false);
+      }
+    } else {
+      document.getElementById('login-screen').classList.add('active');
+    }
+  }, 2000);
+});
+
+function startApp() {
+  localStorage.setItem('seen', '1');
+  document.getElementById('onboarding').classList.remove('active');
+  updateAvatar();
+  launchApp();
+}
+
+function launchApp() {
+  document.getElementById('app').classList.add('active');
+  showTermsIfNeeded();
+  animateCounter();
+  initNotifications();
+  updateOnlineStatus();
+  fetchAll();
+  renderWhatIf();
+  scheduleMarketRefresh();
+}
+
+function scheduleMarketRefresh() {
+  nextUpdateAt = Date.now() + REFRESH_INTERVAL_MS;
+  updateRefreshCountdown();
+
+  if (refreshCountdownTimer) clearInterval(refreshCountdownTimer);
+  refreshCountdownTimer = setInterval(updateRefreshCountdown, 1000);
+
+  setInterval(() => {
+    fetchAll();
+    nextUpdateAt = Date.now() + REFRESH_INTERVAL_MS;
+    updateRefreshCountdown();
+  }, REFRESH_INTERVAL_MS);
+}
+
+async function fetchAll() {
+  await fetchCryptos();
+  fetchFearGreed();
+  loadTendencias();
+  loadLanzamientos();
+  loadTrendingSection();
+  // Actualizar What If con precios frescos
+  if (STATE.whatIf && STATE.whatIf.positions && STATE.whatIf.positions.length > 0) {
+    renderWhatIf();
+  }
+}
+
+async function loadTrendingSection() {
+  const trending = await loadTrendingFromGitHub();
+  const global = await loadGlobalFromGitHub();
+  const el = document.getElementById('trending-extra');
+  if (!el) return;
+  let html = '';
+  if (global) {
+    const btcDom = global.market_cap_percentage && global.market_cap_percentage.btc
+      ? global.market_cap_percentage.btc.toFixed(1) + '%' : '—';
+    const totalMcap = global.total_market_cap && global.total_market_cap.usd
+      ? '$' + (global.total_market_cap.usd / 1e12).toFixed(2) + 'T' : '—';
+    html += `<div class="news-card">
+      <div class="news-tag">Mercado Global</div>
+      <div class="news-title">Cap. total del mercado cripto: ${totalMcap} · Dominancia BTC: ${btcDom}</div>
+      <div class="news-footer"><div class="news-meta">Datos en vivo</div>
+      <a class="news-link" href="https://coinmarketcap.com/charts/" target="_blank" rel="noopener">ver más →</a></div>
+    </div>`;
+  }
+  if (trending && trending.length) {
+    const names = trending.map(t => t.item.name).join(', ');
+    html += `<div class="news-card">
+      <div class="news-tag">Trending ahora</div>
+      <div class="news-title">Las más buscadas: ${names}</div>
+      <div class="news-footer"><div class="news-meta">CoinGecko Trending</div>
+      <a class="news-link" href="https://www.coingecko.com/en/discover" target="_blank" rel="noopener">ver más →</a></div>
+    </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ══ CRYPTOS ══
+const GITHUB_MARKET_URL = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/market.json';
+const GITHUB_FG_URL     = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/feargreed.json';
+const COINGECKO_URL     = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h';
+const ALTME_FG_URL      = 'https://api.alternative.me/fng/?limit=1';
+
+
+function saveMarketCache(data) {
+  try {
+    if (Array.isArray(data) && data.length > 0) {
+      localStorage.setItem(MARKET_CACHE_KEY, JSON.stringify(data));
+      localStorage.setItem(MARKET_UPDATE_CACHE_KEY, new Date().toISOString());
+    }
+  } catch(e) {}
+}
+
+function loadMarketCache() {
+  try {
+    const raw = localStorage.getItem(MARKET_CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data) || !data.length) return null;
+    return {
+      data,
+      updatedAt: localStorage.getItem(MARKET_UPDATE_CACHE_KEY)
+    };
+  } catch(e) {
+    return null;
+  }
+}
+
+function setOfflineMessage(message) {
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  banner.textContent = message;
+  banner.classList.add('show');
+}
+
+function clearOfflineMessage() {
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  if (navigator.onLine) banner.classList.remove('show');
+}
+
+async function fetchCryptos() {
+  try {
+    // 1ro: intenta leer el JSON cacheado de GitHub (una sola fuente para todos los usuarios)
+    let data = null;
+    try {
+      const res = await fetch(GITHUB_MARKET_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json) && json.length > 0) data = json;
+      }
+    } catch(e) {}
+
+    // 2do: fallback directo a CoinGecko solo si GitHub falla o devuelve vacío
+    if (!data) {
+      const res2 = await fetch(COINGECKO_URL, { cache: 'no-store' });
+      if (!res2.ok) throw new Error('API error');
+      data = await res2.json();
+    }
+
+    STATE.cryptos = data;
+    STATE.lastUpdate = new Date();
+    saveMarketCache(data);
+    clearOfflineMessage();
+    updateLastUpdateLabel();
+    renderCryptos();
+    renderFavs();
+    renderWhatIf();
+    if (typeof populateCompareSelects === 'function') populateCompareSelects();
+  } catch(e) {
+    const cached = loadMarketCache();
+    if (cached) {
+      STATE.cryptos = cached.data;
+      STATE.lastUpdate = cached.updatedAt ? new Date(cached.updatedAt) : null;
+      updateLastUpdateLabel();
+      renderCryptos();
+      renderFavs();
+      renderWhatIf();
+      if (typeof populateCompareSelects === 'function') populateCompareSelects();
+      setOfflineMessage('📡 Sin conexión — mostrando últimos datos guardados');
+    } else {
+      setOfflineMessage('📡 Sin conexión — conectate una vez para cargar datos');
+      renderCryptosFallback();
+    }
+  }
+}
+
+function updateLastUpdateLabel() {
+  updateRefreshCountdown();
+}
+
+function updateRefreshCountdown() {
+  const els = document.querySelectorAll('.refresh-countdown');
+  if (!els.length) return;
+
+  let lastText = 'Última actualización de datos: pendiente';
+  if (STATE.lastUpdate && !isNaN(STATE.lastUpdate.getTime())) {
+    const formatted = STATE.lastUpdate.toLocaleString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    lastText = `Última actualización de datos: ${formatted}`;
+  }
+
+  let timerText = '15:00';
+  if (nextUpdateAt) {
+    const remaining = Math.max(0, nextUpdateAt - Date.now());
+    const totalSeconds = Math.ceil(remaining / 1000);
+    const min = Math.floor(totalSeconds / 60).toString().padStart(2,'0');
+    const sec = (totalSeconds % 60).toString().padStart(2,'0');
+    timerText = `${min}:${sec}`;
+  }
+
+  els.forEach(el => {
+    el.innerHTML = `${lastText} · próxima actualización en <span>${timerText}</span>`;
+  });
+}
+
+function renderCryptos() {
+  if (!STATE.cryptos.length) return;
+  gainersData = [];
+  losersData = [];
+  if (currentMarketTab === 'top') {
+    renderCryptosList(STATE.cryptos);
+  } else {
+    switchMarketTab(currentMarketTab, document.getElementById('subtab-' + currentMarketTab));
+  }
+}
+
+function renderCryptosFallback() {
+  // Si hay datos en STATE de una carga anterior, mantenelos
+  if (STATE.cryptos && STATE.cryptos.length > 0) {
+    renderCryptos();
+    const el = document.getElementById('last-update-time');
+    if (el && STATE.lastUpdate) {
+      const h = STATE.lastUpdate.getHours().toString().padStart(2,'0');
+      const m = STATE.lastUpdate.getMinutes().toString().padStart(2,'0');
+      el.textContent = `⚠️ Sin conexión · últimos datos: ${h}:${m}`;
+      el.style.color = 'var(--yellow)';
+    }
+    return;
+  }
+  // Sin datos previos
+  document.getElementById('crypto-list').innerHTML = `
+    <div style="text-align:center;padding:40px 20px;font-family:var(--font-mono);font-size:0.75rem;color:var(--muted)">
+      Sin conexión. Los datos se actualizarán al reconectar.
+    </div>`;
+}
+
+// ══ FEAR & GREED ══
+async function fetchFearGreed() {
+  try {
+    let data = null;
+    // 1ro: intenta desde GitHub cache
+    try {
+      const res = await fetch(GITHUB_FG_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      if (res.ok) data = await res.json();
+    } catch(e) {}
+    // 2do: fallback directo
+    if (!data) {
+      const res2 = await fetch(ALTME_FG_URL);
+      data = await res2.json();
+    }
+    localStorage.setItem(FEAR_GREED_CACHE_KEY, JSON.stringify(data));
+    const val = parseInt(data.data[0].value);
+    const txt = data.data[0].value_classification;
+    STATE.fearGreed = { val, txt };
+    renderFearGreed(val, txt);
+  } catch(e) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(FEAR_GREED_CACHE_KEY) || 'null');
+      if (cached && cached.data && cached.data[0]) {
+        const val = parseInt(cached.data[0].value);
+        const txt = cached.data[0].value_classification;
+        STATE.fearGreed = { val, txt };
+        renderFearGreed(val, txt);
+        return;
+      }
+    } catch(err) {}
+    renderFearGreedFallback();
+  }
+}
+
+function renderFearGreed(val, txt) {
+  const badge = document.getElementById('fear-badge');
+  const num = document.getElementById('fg-num');
+  const label = document.getElementById('fg-label');
+  const desc = document.getElementById('fg-desc');
+  const bar = document.getElementById('fg-bar');
+  let cls, color, barColor, explanation;
+  if (val >= 60) {
+    cls = 'greed'; color = 'green'; barColor = 'var(--green)';
+    explanation = val >= 80 ? 'Mercado en codicia extrema. Cuidado — podría estar sobrecomprado.' : 'El mercado está optimista. Buenos momentos para analizar salidas.';
+  } else if (val <= 40) {
+    cls = 'fear'; color = 'red'; barColor = 'var(--red)';
+    explanation = val <= 20 ? 'Miedo extremo. Históricamente, momento de oportunidades.' : 'El mercado está nervioso. Volatilidad alta esperada.';
+  } else {
+    cls = 'neutral'; color = 'yellow'; barColor = 'var(--yellow)';
+    explanation = 'Mercado en equilibrio. Sin señales claras de dirección.';
+  }
+  badge.className = `fear-badge ${cls}`;
+  badge.textContent = `${cls === 'greed' ? '📈' : cls === 'fear' ? '📉' : '⚖️'} ${val}`;
+  num.className = `fg-number ${color}`;
+  num.textContent = val;
+  label.textContent = translateFG(txt);
+  desc.textContent = explanation;
+  bar.style.width = val + '%';
+  bar.style.background = barColor;
+}
+
+function translateFG(txt) {
+  const map = { 'Extreme Fear':'Miedo Extremo','Fear':'Miedo','Neutral':'Neutral','Greed':'Codicia','Extreme Greed':'Codicia Extrema' };
+  return map[txt] || txt;
+}
+
+function renderFearGreedFallback() {
+  document.getElementById('fg-num').textContent = '?';
+  document.getElementById('fg-label').textContent = 'Sin conexión';
+  document.getElementById('fg-desc').textContent = 'No se pudo obtener el índice. Verificá tu conexión.';
+}
+
+// ══ TENDENCIAS ══
+async function loadTrendingFromGitHub() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/trending.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.coins ? data.coins.slice(0, 5) : null;
+  } catch(e) { return null; }
+}
+
+async function loadGlobalFromGitHub() {
+  try {
+    const res = await fetch('https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/global.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.data || null;
+  } catch(e) { return null; }
+}
+
+function loadTendencias() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // Tendencias orientativas con fecha vigente. Más adelante puede conectarse a RSS/API real.
+  const candidateAnalyses = [
+    { tag: 'Análisis', title: 'Bitcoin: lectura rápida de dominancia y fuerza relativa frente a altcoins', meta: 'Dominancia BTC', dateObj: addDays(today, 0), url: 'https://coinmarketcap.com/charts/' },
+    { tag: 'Tendencia', title: 'Layer-2 y redes rápidas vuelven al radar por actividad y volumen', meta: 'Ecosistema ETH/L2', dateObj: addDays(today, 0), url: 'https://l2beat.com' },
+    { tag: 'Macro', title: 'Tasas, dólar e inflación siguen marcando el clima de activos de riesgo', meta: 'Contexto global', dateObj: addDays(today, 1), url: 'https://www.federalreserve.gov/monetarypolicy.htm' },
+    { tag: 'DeFi', title: 'Protocolos DeFi: revisar TVL, volumen y rotación entre cadenas', meta: 'Finanzas descentralizadas', dateObj: addDays(today, 1), url: 'https://defillama.com' },
+    { tag: 'Regulación', title: 'Marco regulatorio cripto: seguimiento de avances por país y exchanges', meta: 'Contexto regulatorio', dateObj: addDays(today, 2), url: 'https://cointelegraph.com/tags/regulation' },
+    { tag: 'Mercado', title: 'Flujos institucionales: ETFs, stablecoins y liquidez como señales de fondo', meta: 'Institucional', dateObj: addDays(today, 2), url: 'https://farside.co.uk/bitcoin-etf-flow-all-data/' },
+    { tag: 'Solana', title: 'Solana: monitorear actividad de red, fees y volumen de DEX', meta: 'Adopción', dateObj: addDays(today, 3), url: 'https://solscan.io' },
+    { tag: 'Stablecoins', title: 'Stablecoins: capitalización y oferta circulante como termómetro de liquidez', meta: 'Liquidez', dateObj: addDays(today, 3), url: 'https://coinmarketcap.com/view/stablecoins/' },
+    { tag: 'IA + Cripto', title: 'Tokens de IA: sector volátil con fuerte narrativa de corto plazo', meta: 'Sector en auge', dateObj: addDays(today, 4), url: 'https://coinmarketcap.com/view/artificial-intelligence/' },
+  ];
+
+  const analyses = candidateAnalyses
+    .filter(a => a.dateObj >= today)
+    .sort((a,b) => a.dateObj - b.dateObj)
+    .slice(0, 9)
+    .map(a => ({ ...a, date: formatEventDate(a.dateObj) }));
+
+  document.getElementById('news-list').innerHTML = analyses.map(a => `
+    <div class="news-card">
+      <div class="news-tag">${a.tag}</div>
+      <div class="news-title">${a.title}</div>
+      <div class="news-footer">
+        <div class="news-meta">${a.meta} · Pub. ${a.date}</div>
+        <a class="news-link" href="${a.url}" target="_blank" rel="noopener">ver fuente →</a>
+      </div>
+    </div>`).join('');
+}
+
+// ══ LANZAMIENTOS ══
+function loadLanzamientos() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const y = today.getFullYear();
+  const month = today.getMonth();
+
+  // Eventos orientativos generados hacia adelante para evitar mostrar hitos vencidos.
+  // Más adelante este bloque puede reemplazarse por una API/calendario cripto real.
+  const candidateEvents = [
+    {
+      name: 'Cierre mensual del mercado cripto',
+      dateObj: new Date(y, month + 1, 0),
+      desc: 'Fin de mes: buen momento para revisar rendimiento mensual, dominancia BTC y rotación hacia altcoins.',
+      url: 'https://coinmarketcap.com/charts/'
+    },
+    {
+      name: 'Revisión semanal de Bitcoin y Ethereum',
+      dateObj: getNextWeekday(1),
+      desc: 'Lectura rápida de tendencia semanal, volumen y sentimiento general del mercado.',
+      url: 'https://www.coinglass.com'
+    },
+    {
+      name: 'Radar de altcoins: movimientos fuertes',
+      dateObj: addDays(today, 7),
+      desc: 'Chequeo de criptos con mayor variación reciente para detectar oportunidades o zonas de riesgo.',
+      url: 'https://coinmarketcap.com/gainers-losers/'
+    },
+    {
+      name: 'Próxima lectura macro relevante',
+      dateObj: addDays(today, 14),
+      desc: 'Las tasas, inflación y dólar global suelen impactar fuerte en Bitcoin y activos de riesgo.',
+      url: 'https://www.federalreserve.gov/monetarypolicy.htm'
+    },
+    {
+      name: 'Ethereum — Fusaka Upgrade',
+      dateObj: new Date(2025, 8, 1),
+      desc: 'Próximo hard fork de Ethereum post-Pectra. Mejoras en reducción de gas y capa de datos.',
+      url: 'https://ethereum.org/en/roadmap/'
+    },
+    {
+      name: 'Cardano — Chang Hard Fork',
+      dateObj: new Date(2025, 6, 1),
+      desc: 'Gobernanza descentralizada completa en la red Cardano. Gran paso para la comunidad ADA.',
+      url: 'https://roadmap.cardano.org'
+    },
+    {
+      name: 'Solana — Firedancer v1',
+      dateObj: new Date(2025, 9, 1),
+      desc: 'Nuevo validador cliente de Jump Crypto. Promete velocidad y estabilidad sin precedentes.',
+      url: 'https://jumpcrypto.com/firedancer/'
+    },
+    {
+      name: 'Bitcoin — próximo halving estimado',
+      dateObj: new Date(2028, 3, 1),
+      desc: 'Evento programado de reducción de emisión. La fecha exacta depende de la velocidad de bloques.',
+      url: 'https://www.bitcoinblockhalf.com'
+    }
+  ];
+
+  const launches = candidateEvents
+    .filter(e => e.dateObj >= today)
+    .sort((a,b) => a.dateObj - b.dateObj)
+    .slice(0, 6)
+    .map(e => ({
+      name: e.name,
+      date: formatEventDate(e.dateObj),
+      desc: e.desc,
+      url: e.url || null
+    }));
+
+  document.getElementById('launch-list').innerHTML = launches.map(l => `
+    <div class="launch-card">
+      <div class="launch-header">
+        <div class="launch-name">${l.name}</div>
+        <div class="launch-date">${l.date}</div>
+      </div>
+      <div class="launch-desc">${l.desc}</div>
+      ${l.url ? `<a class="launch-link" href="${l.url}" target="_blank" rel="noopener">ver más →</a>` : ''}
+    </div>`).join('');
+}
+
+function addDays(baseDate, days) {
+  const d = new Date(baseDate);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function getNextWeekday(targetDay) {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  const diff = (targetDay + 7 - d.getDay()) % 7 || 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function formatEventDate(dateObj) {
+  return dateObj.toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '');
+}
+
+// ══ MODAL ══
+let currentModalIdx = null;
+function openModal(idx) {
+  const c = STATE.cryptos[idx];
+  if (!c) return;
+  currentModalIdx = idx;
+  const chg = c.price_change_percentage_24h || 0;
+
+  const imgEl = document.getElementById('modal-img');
+  imgEl.src = c.image || '';
+  imgEl.style.display = c.image ? 'block' : 'none';
+
+  document.getElementById('modal-name').textContent = c.name + ' (' + c.symbol.toUpperCase() + ')';
+  document.getElementById('modal-price').textContent = formatPrice(c.current_price);
+  document.getElementById('modal-price').style.color = chg > 0 ? 'var(--green)' : chg < 0 ? 'var(--red)' : 'var(--yellow)';
+
+  const chgEl = document.getElementById('modal-change');
+  chgEl.textContent = (chg > 0 ? '▲ +' : '▼ ') + chg.toFixed(2) + '%';
+  chgEl.style.color = chg > 0 ? 'var(--green)' : chg < 0 ? 'var(--red)' : 'var(--yellow)';
+
+  document.getElementById('modal-mcap').textContent = formatLarge(c.market_cap);
+  document.getElementById('modal-vol').textContent = formatLarge(c.total_volume);
+  document.getElementById('modal-rank').textContent = '#' + c.market_cap_rank;
+
+  // Wallets
+  const wallets = COIN_WALLETS[c.id] || ['binance','coinbase','kraken'];
+  document.getElementById('modal-wallets').innerHTML = wallets.map(w => {
+    const wdata = WALLET_LOGOS[w];
+    if (!wdata) return '';
+    return `<div class="wallet-chip"><img class="wallet-chip-icon" src="${wdata.logo}" alt="${wdata.name}" onerror="this.style.display='none'"><span>${wdata.name}</span></div>`;
+  }).join('');
+
+  const isFav = STATE.favs.includes(c.id);
+  document.getElementById('modal-fav-btn').textContent = isFav ? '★ En favoritos' : '☆ Agregar a favoritos';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target === document.getElementById('modal-overlay')) {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+}
+
+function toggleFav() {
+  if (!STATE.unlocked) {
+    closeModal();
+    showPage('favoritos', document.getElementById('nav-favoritos'));
+    return;
+  }
+  const c = STATE.cryptos[currentModalIdx];
+  if (!c) return;
+  const idx = STATE.favs.indexOf(c.id);
+  if (idx > -1) {
+    STATE.favs.splice(idx, 1);
+    document.getElementById('modal-fav-btn').textContent = '☆ Agregar a favoritos';
+  } else {
+    STATE.favs.push(c.id);
+    document.getElementById('modal-fav-btn').textContent = '★ En favoritos';
+  }
+  localStorage.setItem('favs', JSON.stringify(STATE.favs));
+  renderFavs();
+}
+
+// ══ FAVORITOS ══
+function renderFavs() {
+  document.getElementById('share-num').textContent = STATE.shareCount;
+  if (STATE.unlocked) {
+    document.getElementById('fav-locked').style.display = 'none';
+    document.getElementById('fav-unlocked').style.display = 'block';
+    const grid = document.getElementById('fav-grid');
+    const favCryptos = STATE.cryptos.filter(c => STATE.favs.includes(c.id));
+    if (!favCryptos.length) {
+      grid.innerHTML = `<div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--muted);padding:20px 0">Todavía no agregaste ninguna. Tocá una cripto en Mercado.</div>`;
+      return;
+    }
+    grid.innerHTML = favCryptos.map(c => {
+      const chg = c.price_change_percentage_24h || 0;
+      const cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+      const arrow = chg > 0 ? '▲' : '▼';
+      return `
+        <div class="fav-item">
+          <div class="fav-item-icon"><img src="${c.image||''}" alt="${c.symbol}"></div>
+          <div class="fav-item-info">
+            <div class="fav-item-name">${c.name}</div>
+            <div class="fav-item-price">${formatPrice(c.current_price)}</div>
+          </div>
+          <div class="fav-item-change ${cls}">${arrow} ${Math.abs(chg).toFixed(2)}%</div>
+          <button class="remove-fav" onclick="removeFav('${c.id}')">×</button>
+        </div>`;
+    }).join('');
+  }
+}
+
+function removeFav(id) {
+  STATE.favs = STATE.favs.filter(f => f !== id);
+  localStorage.setItem('favs', JSON.stringify(STATE.favs));
+  saveUserData();
+  renderFavs();
+}
+
+// ══ SHARE / UNLOCK ══
+function tryShare() {
+  STATE.shareCount++;
+  localStorage.setItem('shareCount', STATE.shareCount);
+  document.getElementById('share-num').textContent = STATE.shareCount;
+
+  const shareData = {
+    title: 'CryptoRadar',
+    text: '📈 Probá CryptoRadar: mercado cripto simple, gratis y sin registro.',
+    url: PUBLIC_APP_URL
+  };
+
+  if (navigator.share) {
+    navigator.share(shareData).catch(() => {
+      copyPublicLink();
+    });
+  } else {
+    copyPublicLink();
+  }
+
+  if (STATE.shareCount >= 3) {
+    STATE.unlocked = true;
+    localStorage.setItem('unlocked', 'true');
+    saveUserData();
+    renderFavs();
+  }
+}
+
+function copyPublicLink() {
+  if (navigator.clipboard && location.protocol === 'https:') {
+    navigator.clipboard.writeText(PUBLIC_APP_URL).then(() => {
+      alert('Link público copiado para compartir:\n' + PUBLIC_APP_URL);
+    }).catch(() => {
+      prompt('Copiá este link para compartir CryptoRadar:', PUBLIC_APP_URL);
+    });
+  } else {
+    prompt('Copiá este link para compartir CryptoRadar:', PUBLIC_APP_URL);
+  }
+}
+
+// ══ COUNTER ══
+function animateCounter() {
+  const base = 12847;
+  const rand = Math.floor(Math.random() * 500);
+  let current = base + rand;
+  const el = document.getElementById('user-count');
+  let display = 0;
+  const step = Math.ceil(current / 40);
+  const interval = setInterval(() => {
+    display = Math.min(display + step, current);
+    el.textContent = display.toLocaleString('es-AR');
+    if (display >= current) clearInterval(interval);
+  }, 30);
+  setInterval(() => {
+    current += Math.floor(Math.random() * 3) - 1;
+    el.textContent = current.toLocaleString('es-AR');
+  }, 8000);
+}
+
+
+
+// ══ WHAT IF SIMULATOR ══
+function saveWhatIf() {
+  localStorage.setItem('whatif-state', JSON.stringify(STATE.whatIf));
+  saveUserData();
+}
+
+function renderWhatIfHistory() {
+  const el = document.getElementById('whatif-history-list');
+  if (!el) return;
+  const history = (STATE.whatIf && STATE.whatIf.history) || [];
+  if (!history.length) {
+    el.innerHTML = '<div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--muted);padding:8px 0">Aún no cerraste ninguna posición.</div>';
+    return;
+  }
+  el.innerHTML = history.slice(-5).reverse().map(h => {
+    const pnl = h.closeValue - h.invested;
+    const pnlPct = ((pnl / h.invested) * 100).toFixed(1);
+    return `<div class="whatif-history-item">
+      <div>
+        <div class="whatif-history-label">${h.name} · ${h.date}</div>
+        <div class="whatif-history-label" style="color:var(--muted)">Invertido: ${formatPrice(h.invested)}</div>
+      </div>
+      <div class="whatif-history-val" style="color:${pnl >= 0 ? 'var(--green)' : 'var(--red)'}">${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}<br><span style="font-size:0.6rem">${pnl >= 0 ? '+' : ''}${pnlPct}%</span></div>
+    </div>`;
+  }).join('');
+}
+
+function getCurrentCoin(id) {
+  return STATE.cryptos.find(c => c.id === id);
+}
+
+function whatIfBuy(coinId) {
+  const coin = getCurrentCoin(coinId);
+  if (!coin || !coin.current_price) {
+    alert('Todavía no hay precio disponible para esta cripto.');
+    return;
+  }
+
+  const raw = prompt(`¿Cuántos USD ficticios querés poner en ${coin.name}?`, '100');
+  if (raw === null) return;
+
+  const amount = parseFloat(String(raw).replace(',', '.'));
+  if (!amount || amount <= 0) {
+    alert('Ingresá un importe válido.');
+    return;
+  }
+
+  if (amount > STATE.whatIf.cash) {
+    alert('No tenés saldo ficticio suficiente. Podés recargar $1000 virtuales con el cafecito.');
+    return;
+  }
+
+  STATE.whatIf.cash -= amount;
+  STATE.whatIf.positions.push({
+    id: coin.id,
+    name: coin.name,
+    symbol: coin.symbol,
+    image: coin.image,
+    invested: amount,
+    entryPrice: coin.current_price,
+    qty: amount / coin.current_price,
+    openedAt: new Date().toISOString()
+  });
+
+  saveWhatIf();
+  renderWhatIf();
+}
+
+function whatIfSell(index) {
+  const pos = STATE.whatIf.positions[index];
+  if (!pos) return;
+
+  const coin = getCurrentCoin(pos.id);
+  const currentPrice = coin?.current_price || pos.entryPrice;
+  const currentValue = pos.qty * currentPrice;
+
+  // Guardar en historial
+  if (!STATE.whatIf.history) STATE.whatIf.history = [];
+  const now = new Date();
+  STATE.whatIf.history.push({
+    name: pos.name,
+    symbol: pos.symbol,
+    invested: pos.invested,
+    closeValue: currentValue,
+    entryPrice: pos.entryPrice,
+    closePrice: currentPrice,
+    date: now.toLocaleDateString('es-AR', { day:'2-digit', month:'2-digit', year:'2-digit' }),
+  });
+
+  STATE.whatIf.cash += currentValue;
+  STATE.whatIf.positions.splice(index, 1);
+
+  saveWhatIf();
+  renderWhatIf();
+}
+
+function whatIfRecharge() {
+  STATE.whatIf.cash += 1000;
+  STATE.whatIf.totalInjected = (STATE.whatIf.totalInjected || 1000) + 1000;
+  saveWhatIf();
+  renderWhatIf();
+
+  const wantsCoffee = confirm(
+    'Se agregaron $1000 virtuales a tu simulador.\n\n' +
+    'Podés recargar todas las veces que quieras, gratis.\n\n' +
+    'Si CryptoRadar te divierte o te sirve, se agradece un cafecito ☕. ¿Querés ver cómo apoyar?'
+  );
+  if (wantsCoffee) openDonate();
+}
+
+function whatIfReset() {
+  const ok = confirm('¿Reiniciar el juego What If? Se borran solo las posiciones y saldo ficticio.');
+  if (!ok) return;
+  STATE.whatIf = { cash: 1000, positions: [], totalInjected: 1000 };
+  saveWhatIf();
+  renderWhatIf();
+}
+
+function renderWhatIf() {
+  const cashEl = document.getElementById('whatif-cash');
+  const totalEl = document.getElementById('whatif-total');
+  const investedEl = document.getElementById('whatif-invested');
+  const pnlEl = document.getElementById('whatif-pnl');
+  const positionsEl = document.getElementById('whatif-positions');
+  const marketEl = document.getElementById('whatif-market');
+  const chartEl = document.getElementById('whatif-chart');
+
+  if (!cashEl || !totalEl || !investedEl || !pnlEl || !positionsEl || !marketEl) return;
+
+  const positions = STATE.whatIf.positions || [];
+  let invested = 0;
+  let currentPositionsValue = 0;
+  let positionsHtml = '';
+
+  if (!positions.length) {
+    positionsHtml = `<div class="whatif-empty">Todavía no abriste ninguna posición. Comprá una cripto abajo con saldo ficticio y volvé más tarde para ver qué hubiera pasado.</div>`;
+  } else {
+    positionsHtml = positions.map((pos, idx) => {
+      const coin = getCurrentCoin(pos.id);
+      const currentPrice = coin?.current_price || pos.entryPrice;
+      const currentValue = pos.qty * currentPrice;
+      const pnl = currentValue - pos.invested;
+      const pnlPct = pos.invested ? (pnl / pos.invested) * 100 : 0;
+      const pnlCls = pnl >= 0 ? 'up' : 'down';
+
+      invested += pos.invested;
+      currentPositionsValue += currentValue;
+
+      return `
+        <div class="whatif-position">
+          <div class="whatif-position-top">
+            <div class="whatif-coin">
+              <img src="${pos.image || coin?.image || ''}" alt="${pos.symbol || ''}" onerror="this.style.display='none'">
+              <div>
+                <div class="whatif-coin-name">${pos.name}</div>
+                <div class="whatif-coin-sub">${(pos.symbol || '').toUpperCase()}</div>
+              </div>
+            </div>
+            <div class="whatif-pnl ${pnlCls}">${pnl >= 0 ? '+' : '-'}${formatPrice(Math.abs(pnl))}<br>${pnl >= 0 ? '+' : '-'}${Math.abs(pnlPct).toFixed(2)}%</div>
+          </div>
+          <div class="whatif-position-data">
+            <div><div class="whatif-mini-label">Entrada</div><div class="whatif-mini-value">${formatPrice(pos.entryPrice)}</div></div>
+            <div><div class="whatif-mini-label">Actual</div><div class="whatif-mini-value">${formatPrice(currentPrice)}</div></div>
+            <div><div class="whatif-mini-label">Valor</div><div class="whatif-mini-value">${formatPrice(currentValue)}</div></div>
+          </div>
+          <button class="whatif-sell" onclick="whatIfSell(${idx})">VENDER SIMULADO</button>
+        </div>`;
+    }).join('');
+  }
+
+  const total = STATE.whatIf.cash + currentPositionsValue;
+  const totalInjected = STATE.whatIf.totalInjected || 1000;
+  const pnlTotal = total - totalInjected;
+
+  cashEl.textContent = formatPrice(STATE.whatIf.cash);
+  totalEl.textContent = formatPrice(total);
+  investedEl.textContent = formatPrice(invested);
+  pnlEl.textContent = `${pnlTotal >= 0 ? '+' : '-'}${formatPrice(Math.abs(pnlTotal))}`;
+  pnlEl.className = `whatif-stat-value ${pnlTotal >= 0 ? 'up' : 'down'}`;
+  positionsEl.innerHTML = positionsHtml;
+
+  if (chartEl) {
+    const pnlPctTotal = totalInjected ? (pnlTotal / totalInjected) * 100 : 0;
+    const pnlCls = pnlTotal >= 0 ? 'up' : 'down';
+    const barWidth = Math.min(50, Math.abs(pnlPctTotal) * 2);
+    chartEl.innerHTML = `
+      <div class="whatif-chart-title">
+        <span>Gráfica de resultado</span>
+        <span class="${pnlCls === 'up' ? 'whatif-stat-value up' : 'whatif-stat-value down'}">${pnlTotal >= 0 ? '+' : '-'}${Math.abs(pnlPctTotal).toFixed(2)}%</span>
+      </div>
+      <div class="whatif-chart-track">
+        <div class="whatif-chart-mid"></div>
+        <div class="whatif-chart-bar ${pnlCls}" style="width:${barWidth}%"></div>
+      </div>
+      <div class="whatif-chart-scale"><span>Pérdida</span><span>0</span><span>Ganancia</span></div>`;
+  }
+
+  if (!STATE.cryptos.length) {
+    marketEl.innerHTML = `<div class="whatif-empty">Cargando precios reales del mercado...</div>`;
+    return;
+  }
+
+  marketEl.innerHTML = STATE.cryptos.map(c => `
+    <div class="whatif-market-card">
+      <img src="${c.image || ''}" alt="${c.symbol}" onerror="this.style.display='none'">
+      <div class="whatif-market-info">
+        <div class="whatif-market-name">${c.name}</div>
+        <div class="whatif-market-price">${c.symbol.toUpperCase()} · ${formatPrice(c.current_price)}</div>
+      </div>
+      <button class="whatif-buy" onclick="whatIfBuy('${c.id}')">COMPRAR</button>
+    </div>`).join('');
+}
+
+
+function showCryptoGlossary() {
+  alert(
+    'Glosario cripto básico\n\n' +
+    '• Cripto: activo digital que se mueve en una red blockchain.\n' +
+    '• Blockchain: registro público donde quedan guardadas las operaciones.\n' +
+    '• Wallet: billetera para guardar o mover criptos.\n' +
+    '• Exchange: plataforma donde se compran, venden o tradean criptos.\n' +
+    '• Stablecoin: cripto diseñada para valer parecido a una moneda real, como USDT o USDC.\n' +
+    '• Market cap: valor total aproximado de una cripto.\n' +
+    '• Volumen 24h: dinero movido en esa cripto durante las últimas 24 horas.\n' +
+    '• PnL: ganancia o pérdida de una posición.\n' +
+    '• ATH: precio máximo histórico.\n\n' +
+    'Esto es información básica, no recomendación de inversión.'
+  );
+}
+
+
+
+// ══ IDIOMAS / i18n ══
+const LANG = {
+  es: {
+    // Splash
+    splash_sub: 'Mercado en tiempo real',
+    // Lang screen
+    lang_title: 'Elegí tu idioma',
+    lang_sub: 'Podés cambiarlo después desde tu perfil',
+    // Onboarding
+    ob_title: 'Todo lo que necesitás saber de <span style="color:var(--yellow)">cripto</span>, de un vistazo.',
+    ob_desc: 'Precios en vivo, tendencias, próximos lanzamientos y el sentimiento del mercado. Gratis. Sin cuenta. Sin complicaciones.',
+    ob_btn: 'ENTRAR →',
+    // Login
+    login_enter: 'Entrar',
+    login_register: 'Crear cuenta',
+    login_user: 'Usuario',
+    login_pin: 'PIN (4 dígitos)',
+    login_btn: 'ENTRAR',
+    reg_user: 'Elegí un usuario',
+    reg_pin: 'PIN de 4 dígitos',
+    reg_pin2: 'Repetí el PIN',
+    reg_btn: 'CREAR CUENTA',
+    login_skip: 'Entrar sin cuenta',
+    login_footer: 'Tus datos se guardan solo en este dispositivo.<br>Sin servidor. Sin emails. Sin datos personales.',
+    // Errors
+    err_user_required: 'Ingresá un usuario.',
+    err_pin_invalid: 'El PIN debe ser 4 dígitos.',
+    err_user_not_found: 'Usuario no encontrado.',
+    err_pin_wrong: 'PIN incorrecto.',
+    err_user_short: 'El usuario debe tener al menos 3 caracteres.',
+    err_user_chars: 'Solo letras, números y guión bajo.',
+    err_pin_numeric: 'El PIN debe ser 4 dígitos numéricos.',
+    err_pin_match: 'Los PINs no coinciden.',
+    err_user_exists: 'Ese usuario ya existe. Probá con otro.',
+    // Nav
+    nav_whatif: 'What If',
+    nav_market: 'Mercado',
+    nav_trends: 'Tendencias',
+    nav_upcoming: 'Próximos',
+    nav_myfavs: 'Mis Cryptos',
+    // Header
+    donate_btn: '☕ Invitanos un café · $1 USD',
+    // Sections
+    label_top_cryptos: 'Top Criptomonedas',
+    label_sentiment: 'Sentimiento del mercado',
+    label_analysis: 'Análisis & Tendencias',
+    label_upcoming: 'Próximos eventos cripto',
+    label_simulator: 'Simulador lúdico',
+    label_myfavs: 'Tus criptomonedas',
+    last_update: 'Última actualización',
+    next_update: 'próxima en 15 min',
+    pending: 'pendiente',
+    no_connection: 'Sin conexión o límite de API alcanzado.<br>Reintentando en 15 min.',
+    // Fear & Greed
+    fg_extreme_fear: 'Miedo Extremo',
+    fg_fear: 'Miedo',
+    fg_neutral: 'Neutral',
+    fg_greed: 'Codicia',
+    fg_extreme_greed: 'Codicia Extrema',
+    fg_loading: 'Cargando...',
+    fg_loading_desc: 'Consultando índice Fear & Greed...',
+    fg_no_conn: 'Sin conexión',
+    fg_no_conn_desc: 'No se pudo obtener el índice. Verificá tu conexión.',
+    fg_extr_greed_desc: 'Mercado en codicia extrema. Cuidado — podría estar sobrecomprado.',
+    fg_greed_desc: 'El mercado está optimista. Buenos momentos para analizar salidas.',
+    fg_extr_fear_desc: 'Miedo extremo. Históricamente, momento de oportunidades.',
+    fg_fear_desc: 'El mercado está nervioso. Volatilidad alta esperada.',
+    fg_neutral_desc: 'Mercado en equilibrio. Sin señales claras de dirección.',
+    // Favs
+    fav_locked_title: 'Desbloqueá Mis Cryptos',
+    fav_locked_desc: 'Seguí tus criptomonedas favoritas. Compartí la app con 3 amigos para desbloquear.',
+    fav_share_btn: 'Compartir con amigos →',
+    fav_shared_with: 'Compartiste con',
+    fav_friends: 'amigos',
+    fav_empty: 'Todavía no agregaste ninguna. Tocá una cripto en Mercado.',
+    // Notifications
+    notif_title: '🔔 Notificación diaria',
+    notif_desc: 'Recibí un resumen de tu simulación What If todos los días al mediodía.',
+    notif_label: 'Activar notificación a las 12:00',
+    notif_ios: '⚠️ En iPhone solo funciona si instalás CryptoRadar en tu pantalla de inicio.',
+    notif_no_support: 'Tu navegador no soporta notificaciones. Instalá la app en tu pantalla de inicio.',
+    notif_denied: 'Permiso denegado. Activá las notificaciones desde la configuración de tu dispositivo.',
+    // Modal
+    modal_change_24h: '24h Cambio',
+    modal_mcap: 'Cap. de mercado',
+    modal_vol: 'Volumen 24h',
+    modal_rank: 'Rank global',
+    modal_available: 'Disponible en',
+    modal_add_fav: '☆ Agregar a favoritos',
+    modal_in_fav: '★ En favoritos',
+    modal_close: 'CERRAR',
+    // What If
+    whatif_title: '¿Qué hubiera pasado si...?',
+    whatif_coin_label: 'Cripto',
+    whatif_amount_label: 'Si hubieras invertido',
+    whatif_date_label: 'El día',
+    whatif_calc_btn: 'CALCULAR',
+    whatif_result_today: 'Hoy valdría',
+    whatif_result_gain: 'Ganancia',
+    whatif_result_loss: 'Pérdida',
+    // Donate
+    donate_title: '☕ Invitanos un café',
+    donate_sub: 'Si la app te sirve, cualquier aporte nos ayuda a seguir mejorando. Sin presión — la app siempre es gratis.',
+    donate_uid_label: 'Binance UID',
+    donate_copy: 'Copiar UID',
+    donate_copied: '✓ Copiado',
+    donate_instructions: 'Abrí Binance → Pay → Enviar → buscar por UID<br>o escaneá el QR desde la app de Binance.',
+    donate_close: 'CERRAR',
+    // Terms
+    terms_title: '⚠️ Antes de empezar',
+    terms_body: '<strong>CryptoRadar</strong> es una aplicación <strong>informativa y lúdica</strong>. No opera con dinero real ni realiza transacciones de ningún tipo.<br><br>Los precios y datos mostrados son <strong>orientativos</strong> y pueden no reflejar el valor exacto en tiempo real. No constituyen asesoramiento financiero.<br><br>El simulador <strong>What If</strong> es un juego de escenarios hipotéticos sin ningún valor económico.<br><br>La opción de "invitarnos un café" es completamente <strong>voluntaria</strong> y no otorga ningún beneficio adicional.',
+    terms_btn: 'Entendido — Entrar',
+    // Install
+    install_title: 'Instalá CryptoRadar',
+    install_sub: 'Funciona como app · Sin App Store · Gratis',
+    install_btn: 'Instalar',
+    // User menu
+    user_guest: 'Estás en modo invitado. Tus favoritos no se guardan entre sesiones.\n\n¿Querés crear una cuenta?',
+    user_logout: '¿Cerrar sesión?',
+    // Refresh
+    refresh_update: 'actualizar',
+    // Upcoming links
+    see_more: 'ver más →',
+    // Trending
+    trending_title: 'Mercado Global',
+    trending_now: 'Trending ahora',
+    trending_searched: 'Las más buscadas',
+    live_data: 'Datos en vivo',
+    coingecko_trending: 'CoinGecko Trending',
+  },
+  en: {
+    splash_sub: 'Real-time market',
+    lang_title: 'Choose your language',
+    lang_sub: 'You can change it later from your profile',
+    ob_title: 'Everything you need to know about <span style="color:var(--yellow)">crypto</span>, at a glance.',
+    ob_desc: 'Live prices, trends, upcoming launches and market sentiment. Free. No account needed. No complications.',
+    ob_btn: 'GET STARTED →',
+    login_enter: 'Sign In',
+    login_register: 'Create Account',
+    login_user: 'Username',
+    login_pin: 'PIN (4 digits)',
+    login_btn: 'SIGN IN',
+    reg_user: 'Choose a username',
+    reg_pin: '4-digit PIN',
+    reg_pin2: 'Repeat PIN',
+    reg_btn: 'CREATE ACCOUNT',
+    login_skip: 'Continue as guest',
+    login_footer: 'Your data is stored only on this device.<br>No server. No emails. No personal data.',
+    err_user_required: 'Please enter a username.',
+    err_pin_invalid: 'PIN must be 4 digits.',
+    err_user_not_found: 'User not found.',
+    err_pin_wrong: 'Incorrect PIN.',
+    err_user_short: 'Username must be at least 3 characters.',
+    err_user_chars: 'Only letters, numbers and underscores.',
+    err_pin_numeric: 'PIN must be 4 numeric digits.',
+    err_pin_match: 'PINs do not match.',
+    err_user_exists: 'Username already exists. Try another.',
+    nav_whatif: 'What If',
+    nav_market: 'Market',
+    nav_trends: 'Trends',
+    nav_upcoming: 'Upcoming',
+    nav_myfavs: 'My Cryptos',
+    donate_btn: '☕ Buy us a coffee · $1 USD',
+    label_top_cryptos: 'Top Cryptocurrencies',
+    label_sentiment: 'Market Sentiment',
+    label_analysis: 'Analysis & Trends',
+    label_upcoming: 'Upcoming crypto events',
+    label_simulator: 'Hypothetical simulator',
+    label_myfavs: 'Your cryptocurrencies',
+    last_update: 'Last update',
+    next_update: 'next in 15 min',
+    pending: 'pending',
+    no_connection: 'No connection or API limit reached.<br>Retrying in 15 min.',
+    fg_extreme_fear: 'Extreme Fear',
+    fg_fear: 'Fear',
+    fg_neutral: 'Neutral',
+    fg_greed: 'Greed',
+    fg_extreme_greed: 'Extreme Greed',
+    fg_loading: 'Loading...',
+    fg_loading_desc: 'Fetching Fear & Greed index...',
+    fg_no_conn: 'No connection',
+    fg_no_conn_desc: 'Could not fetch index. Check your connection.',
+    fg_extr_greed_desc: 'Extreme greed. Caution — market may be overbought.',
+    fg_greed_desc: 'Market is optimistic. Good time to consider exits.',
+    fg_extr_fear_desc: 'Extreme fear. Historically a moment of opportunity.',
+    fg_fear_desc: 'Market is nervous. High volatility expected.',
+    fg_neutral_desc: 'Balanced market. No clear directional signals.',
+    fav_locked_title: 'Unlock My Cryptos',
+    fav_locked_desc: 'Track your favorite cryptocurrencies. Share the app with 3 friends to unlock.',
+    fav_share_btn: 'Share with friends →',
+    fav_shared_with: 'Shared with',
+    fav_friends: 'friends',
+    fav_empty: 'No cryptos added yet. Tap any crypto in Market.',
+    notif_title: '🔔 Daily notification',
+    notif_desc: 'Get a What If summary every day at noon.',
+    notif_label: 'Enable 12:00 notification',
+    notif_ios: '⚠️ On iPhone, only works if you install CryptoRadar on your home screen.',
+    notif_no_support: 'Your browser does not support notifications. Install the app on your home screen.',
+    notif_denied: 'Permission denied. Enable notifications in your device settings.',
+    modal_change_24h: '24h Change',
+    modal_mcap: 'Market Cap',
+    modal_vol: '24h Volume',
+    modal_rank: 'Global Rank',
+    modal_available: 'Available on',
+    modal_add_fav: '☆ Add to favorites',
+    modal_in_fav: '★ In favorites',
+    modal_close: 'CLOSE',
+    whatif_title: 'What if you had invested...?',
+    whatif_coin_label: 'Crypto',
+    whatif_amount_label: 'If you had invested',
+    whatif_date_label: 'On',
+    whatif_calc_btn: 'CALCULATE',
+    whatif_result_today: 'Today it would be worth',
+    whatif_result_gain: 'Gain',
+    whatif_result_loss: 'Loss',
+    donate_title: '☕ Buy us a coffee',
+    donate_sub: 'If you find the app useful, any contribution helps us keep improving. No pressure — the app is always free.',
+    donate_uid_label: 'Binance UID',
+    donate_copy: 'Copy UID',
+    donate_copied: '✓ Copied',
+    donate_instructions: 'Open Binance → Pay → Send → search by UID<br>or scan the QR from the Binance app.',
+    donate_close: 'CLOSE',
+    terms_title: '⚠️ Before you start',
+    terms_body: '<strong>CryptoRadar</strong> is an <strong>informational and entertainment</strong> application. It does not operate with real money or perform any transactions.<br><br>Prices and data shown are <strong>indicative</strong> and may not reflect exact real-time values. They do not constitute financial advice.<br><br>The <strong>What If</strong> simulator is a hypothetical scenario game with no economic value.<br><br>The "buy us a coffee" option is completely <strong>voluntary</strong> and grants no additional benefits.',
+    terms_btn: 'Got it — Enter',
+    install_title: 'Install CryptoRadar',
+    install_sub: 'Works like an app · No App Store · Free',
+    install_btn: 'Install',
+    user_guest: 'You are in guest mode. Your favorites are not saved between sessions.\n\nWould you like to create an account?',
+    user_logout: 'Sign out?',
+    refresh_update: 'refresh',
+    see_more: 'read more →',
+    trending_title: 'Global Market',
+    trending_now: 'Trending now',
+    trending_searched: 'Most searched',
+    live_data: 'Live data',
+    coingecko_trending: 'CoinGecko Trending',
+  }
+};
+
+let CURRENT_LANG = localStorage.getItem('cr-lang') || 'es';
+function t(key) { return LANG[CURRENT_LANG][key] || LANG['es'][key] || key; }
+
+function setLang(lang) {
+  CURRENT_LANG = lang;
+  localStorage.setItem('cr-lang', lang);
+  applyLang();
+}
+
+function applyLang() {
+  // Splash
+  const splashSub = document.querySelector('.splash-sub');
+  if (splashSub) splashSub.textContent = t('splash_sub');
+  // Onboarding
+  const obTitle = document.querySelector('.ob-title');
+  if (obTitle) obTitle.innerHTML = t('ob_title');
+  const obDesc = document.querySelector('.ob-desc');
+  if (obDesc) obDesc.textContent = t('ob_desc');
+  const obBtn = document.querySelector('.ob-btn');
+  if (obBtn) obBtn.textContent = t('ob_btn');
+  // Login tabs
+  const tabs = document.querySelectorAll('.login-tab');
+  if (tabs[0]) tabs[0].textContent = t('login_enter');
+  if (tabs[1]) tabs[1].textContent = t('login_register');
+  // Login inputs
+  const lu = document.getElementById('login-user');
+  if (lu) lu.placeholder = t('login_user');
+  const lp = document.getElementById('login-pin');
+  if (lp) lp.placeholder = t('login_pin');
+  const lb = document.querySelector('#login-form-login .login-submit');
+  if (lb) lb.textContent = t('login_btn');
+  const ru = document.getElementById('reg-user');
+  if (ru) ru.placeholder = t('reg_user');
+  const rp = document.getElementById('reg-pin');
+  if (rp) rp.placeholder = t('reg_pin');
+  const rp2 = document.getElementById('reg-pin2');
+  if (rp2) rp2.placeholder = t('reg_pin2');
+  const rb = document.querySelector('#login-form-register .login-submit');
+  if (rb) rb.textContent = t('reg_btn');
+  const skip = document.querySelector('.login-skip');
+  if (skip) skip.textContent = t('login_skip');
+  const footer = document.querySelector('.login-footer');
+  if (footer) footer.innerHTML = t('login_footer');
+  // Nav labels
+  const navLabels = document.querySelectorAll('.nav-label');
+  const navKeys = ['nav_whatif','nav_market','nav_trends','nav_upcoming','nav_myfavs'];
+  navLabels.forEach((el, i) => { if (navKeys[i]) el.textContent = t(navKeys[i]); });
+  // Donate btn header
+  const donateBtn = document.querySelector('.donate-inline-btn');
+  if (donateBtn) donateBtn.textContent = t('donate_btn');
+  // Install banner
+  const installTitle = document.querySelector('.install-title');
+  if (installTitle) installTitle.textContent = t('install_title');
+  const installSub = document.querySelector('.install-sub');
+  if (installSub) installSub.textContent = t('install_sub');
+  const installBtn = document.querySelector('.install-btn');
+  if (installBtn) installBtn.textContent = t('install_btn');
+  // Terms
+  const termsTitle = document.querySelector('.terms-title');
+  if (termsTitle) termsTitle.textContent = t('terms_title');
+  const termsBody = document.querySelector('.terms-body');
+  if (termsBody) termsBody.innerHTML = t('terms_body');
+  const termsBtn = document.querySelector('.terms-accept');
+  if (termsBtn) termsBtn.textContent = t('terms_btn');
+  // Donate modal
+  const donateTitle = document.querySelector('.donate-title');
+  if (donateTitle) donateTitle.textContent = t('donate_title');
+  const donateSub = document.querySelector('.donate-sub');
+  if (donateSub) donateSub.textContent = t('donate_sub');
+  const donateUidLabel = document.querySelector('.donate-uid-label');
+  if (donateUidLabel) donateUidLabel.textContent = t('donate_uid_label');
+  const copyBtn = document.getElementById('copy-uid-btn');
+  if (copyBtn) copyBtn.textContent = t('donate_copy');
+  const donateInstr = document.querySelector('.donate-sheet > div[style]');
+  if (donateInstr) donateInstr.innerHTML = t('donate_instructions');
+  // Notif
+  const notifTitle = document.querySelector('.notif-card-title');
+  if (notifTitle) notifTitle.textContent = t('notif_title');
+  const notifDesc = document.querySelector('.notif-card-desc');
+  if (notifDesc) notifDesc.textContent = t('notif_desc');
+  const notifLabel = document.querySelector('.notif-toggle-label');
+  if (notifLabel) notifLabel.textContent = t('notif_label');
+  const notifNote = document.querySelector('.notif-note');
+  if (notifNote) notifNote.textContent = t('notif_ios');
+}
+
+
+// ══ LANG SELECTION ══
+function chooseLang(lang) {
+  setLang(lang);
+  localStorage.setItem('cr-lang-chosen', '1');
+  document.getElementById('lang-screen').classList.remove('active');
+  document.getElementById('login-screen').classList.add('active');
+  applyLang();
+}
+
+// ══ LOGIN SYSTEM ══
+const DB_KEY = 'cr-users-db';
+const SESSION_KEY = 'cr-session';
+
+function getDB() {
+  try { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); } catch(e) { return {}; }
+}
+function saveDB(db) { localStorage.setItem(DB_KEY, JSON.stringify(db)); }
+
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch(e) { return null; }
+}
+
+function switchLoginTab(tab, el) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('login-form-login').style.display = tab === 'login' ? 'flex' : 'none';
+  document.getElementById('login-form-register').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('reg-error').textContent = '';
+}
+
+function doLogin() {
+  const user = (document.getElementById('login-user').value || '').trim().toLowerCase();
+  const pin = (document.getElementById('login-pin').value || '').trim();
+  const errEl = document.getElementById('login-error');
+  if (!user) { errEl.textContent = 'Ingresá un usuario.'; return; }
+  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { errEl.textContent = 'El PIN debe ser 4 dígitos.'; return; }
+  const db = getDB();
+  if (!db[user]) { errEl.textContent = 'Usuario no encontrado.'; return; }
+  if (db[user].pin !== pin) { errEl.textContent = 'PIN incorrecto.'; return; }
+  errEl.textContent = '';
+  setSession(user, db[user]);
+}
+
+function doRegister() {
+  const user = (document.getElementById('reg-user').value || '').trim().toLowerCase();
+  const pin = (document.getElementById('reg-pin').value || '').trim();
+  const pin2 = (document.getElementById('reg-pin2').value || '').trim();
+  const errEl = document.getElementById('reg-error');
+  if (!user || user.length < 3) { errEl.textContent = 'El usuario debe tener al menos 3 caracteres.'; return; }
+  if (!/^[a-z0-9_]+$/.test(user)) { errEl.textContent = 'Solo letras, números y guión bajo.'; return; }
+  if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) { errEl.textContent = 'El PIN debe ser 4 dígitos numéricos.'; return; }
+  if (pin !== pin2) { errEl.textContent = 'Los PINs no coinciden.'; return; }
+  const db = getDB();
+  if (db[user]) { errEl.textContent = 'Ese usuario ya existe. Probá con otro.'; return; }
+  db[user] = { pin, favs: [], shareCount: 0, unlocked: false, whatif: null, createdAt: new Date().toISOString() };
+  saveDB(db);
+  errEl.textContent = '';
+  setSession(user, db[user]);
+}
+
+function skipLogin() {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user: 'invitado', isGuest: true }));
+  document.getElementById('login-screen').classList.remove('active');
+  proceedAfterLogin(true);
+}
+
+function setSession(user, data) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ user, isGuest: false }));
+  // Load user-specific data into STATE
+  if (data.favs) STATE.favs = data.favs;
+  if (typeof data.unlocked !== 'undefined') STATE.unlocked = data.unlocked;
+  if (typeof data.shareCount !== 'undefined') STATE.shareCount = data.shareCount;
+  if (data.whatif) STATE.whatIf = data.whatif;
+  document.getElementById('login-screen').classList.remove('active');
+  proceedAfterLogin(false);
+}
+
+function proceedAfterLogin(isGuest) {
+  updateAvatar();
+  const seen = localStorage.getItem('seen');
+  if (!seen && !isGuest) {
+    document.getElementById('onboarding').classList.add('active');
+  } else {
+    launchApp();
+    // What If como primera pantalla
+    showPage('whatif', document.getElementById('nav-whatif'));
+  }
+}
+
+function updateAvatar() {
+  const session = getCurrentUser();
+  const el = document.getElementById('user-avatar');
+  if (!el) return;
+  if (!session || session.isGuest) {
+    el.textContent = '?';
+    el.title = 'Invitado';
+  } else {
+    el.textContent = session.user.charAt(0).toUpperCase();
+    el.title = '@' + session.user;
+  }
+}
+
+function saveUserData() {
+  const session = getCurrentUser();
+  if (!session || session.isGuest) return;
+  const db = getDB();
+  if (!db[session.user]) return;
+  db[session.user].favs = STATE.favs;
+  db[session.user].unlocked = STATE.unlocked;
+  db[session.user].shareCount = STATE.shareCount;
+  db[session.user].whatif = STATE.whatIf;
+  saveDB(db);
+}
+
+function showUserMenu() {
+  const session = getCurrentUser();
+  if (!session || session.isGuest) {
+    const ok = confirm('Estás en modo invitado. Tus favoritos no se guardan entre sesiones.\n\n¿Querés crear una cuenta?');
+    if (ok) {
+      document.getElementById('login-screen').classList.add('active');
+      document.getElementById('app').classList.remove('active');
+      switchLoginTab('register', document.querySelectorAll('.login-tab')[1]);
+    }
+    return;
+  }
+  const action = confirm('@' + session.user + '\n\n¿Cerrar sesión?');
+  if (action) {
+    saveUserData();
+    localStorage.removeItem(SESSION_KEY);
+    document.getElementById('app').classList.remove('active');
+    document.getElementById('login-screen').classList.add('active');
+    STATE.favs = [];
+    STATE.unlocked = false;
+    STATE.shareCount = 0;
+  }
+}
+
+// Override saveWhatIf to also persist to user DB
+const _origSaveWhatIf = typeof saveWhatIf === 'function' ? saveWhatIf : null;
+
+
+// ══ TÉRMINOS ══
+function showTermsIfNeeded() {
+  if (!localStorage.getItem('terms-accepted')) {
+    document.getElementById('terms-modal').classList.add('open');
+  }
+}
+function acceptTerms() {
+  localStorage.setItem('terms-accepted', '1');
+  document.getElementById('terms-modal').classList.remove('open');
+}
+
+// ══ NOTIFICACIONES ══
+function initNotifications() {
+  const saved = localStorage.getItem('notif-enabled') === 'true';
+  const toggle = document.getElementById('notif-toggle');
+  if (toggle) toggle.checked = saved;
+  if (saved && 'Notification' in window && Notification.permission === 'granted') {
+    scheduleNoonNotification();
+  }
+}
+
+function toggleNotification(el) {
+  if (el.checked) {
+    if (!('Notification' in window)) {
+      alert('Tu navegador no soporta notificaciones. Instalá la app en tu pantalla de inicio para activarlas.');
+      el.checked = false;
+      return;
+    }
+    Notification.requestPermission().then(perm => {
+      if (perm === 'granted') {
+        localStorage.setItem('notif-enabled', 'true');
+        scheduleNoonNotification();
+      } else {
+        el.checked = false;
+        localStorage.setItem('notif-enabled', 'false');
+        alert('Permiso denegado. Activá las notificaciones desde la configuración de tu dispositivo.');
+      }
+    });
+  } else {
+    localStorage.setItem('notif-enabled', 'false');
+  }
+}
+
+function scheduleNoonNotification() {
+  const now = new Date();
+  const noon = new Date();
+  noon.setHours(12, 0, 0, 0);
+  if (now > noon) noon.setDate(noon.getDate() + 1);
+  const msUntilNoon = noon - now;
+  setTimeout(() => {
+    sendWhatIfNotification();
+    setInterval(sendWhatIfNotification, 24 * 60 * 60 * 1000);
+  }, msUntilNoon);
+}
+
+function sendWhatIfNotification() {
+  if (!localStorage.getItem('notif-enabled') === 'true') return;
+  if (Notification.permission !== 'granted') return;
+  const wi = STATE.whatIf;
+  let body = 'Abrí CryptoRadar para ver tu simulación del día.';
+  if (wi && wi.coin && wi.currentVal !== undefined) {
+    const diff = wi.currentVal - wi.invested;
+    const sign = diff >= 0 ? '+' : '';
+    body = wi.coin + ': tu simulación va ' + sign + diff.toFixed(0) + ' USD hoy.';
+  }
+  new Notification('CryptoRadar 📈', { body, icon: '/favicon.ico' });
+}
+
+
+// ══ PWA ══
+// Service worker solo en contexto seguro, evitando iOS por restricciones de Safari/WebKit.
+if ('serviceWorker' in navigator && location.protocol === 'https:' && location.hostname !== 'localhost' && !isIOS()) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('SW registrado'))
+      .catch(e => console.log('SW no disponible:', e.message));
+  });
+}
+
+// Banner de instalación
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallBanner();
+});
+
+window.addEventListener('load', () => {
+  // iPhone/iPad no dispara beforeinstallprompt. Mostramos guía manual si está en Safari y no está instalada.
+  setTimeout(() => {
+    if (isIOS() && !isStandalone()) showInstallBanner();
+  }, 2500);
+});
+
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function showInstallBanner() {
+  const banner = document.getElementById('install-banner');
+  if (!banner || localStorage.getItem('install-dismissed') || isStandalone()) return;
+
+  const title = banner.querySelector('.install-title');
+  const sub = banner.querySelector('.install-sub');
+  const btn = banner.querySelector('.install-btn');
+
+  if (isIOS()) {
+    if (title) title.textContent = 'Instalá CryptoRadar en iPhone';
+    if (sub) sub.textContent = 'Safari → Compartir → Agregar a pantalla de inicio';
+    if (btn) btn.textContent = 'Ver pasos';
+  } else {
+    if (title) title.textContent = 'Instalá CryptoRadar';
+    if (sub) sub.textContent = 'Usala como app · Gratis · Acceso rápido';
+    if (btn) btn.textContent = 'Instalar';
+  }
+
+  banner.style.display = 'flex';
+}
+
+function installApp() {
+  if (isIOS()) {
+    alert('Para instalar CryptoRadar en iPhone:\n\n1. Abrí esta página desde Safari.\n2. Tocá el botón Compartir.\n3. Elegí "Agregar a pantalla de inicio".\n4. Confirmá con "Agregar".\n\nDespués abrila desde el ícono de CryptoRadar como una app.');
+    return;
+  }
+
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  } else {
+    alert('En Android, abrila con Chrome y usá el menú ⋮ → Agregar a pantalla principal, o tocá Instalar cuando aparezca el aviso.');
+  }
+  dismissInstallBanner();
+}
+
+function dismissInstallBanner() {
+  const banner = document.getElementById('install-banner');
+  if (banner) banner.style.display = 'none';
+  localStorage.setItem('install-dismissed', '1');
+}
+
+
+// ══ OFFLINE DETECTION ══
+function updateOnlineStatus() {
+  const banner = document.getElementById('offline-banner');
+  if (!banner) return;
+  if (!navigator.onLine) {
+    const cached = loadMarketCache();
+    banner.textContent = cached
+      ? '📡 Sin conexión — mostrando últimos datos guardados'
+      : '📡 Sin conexión — conectate una vez para cargar datos';
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+
+// ══ CALCULADORA MODAL ══
+function calcConvert() {
+  const input = document.getElementById('modal-calc-usd');
+  const result = document.getElementById('modal-calc-result');
+  if (!input || !result) return;
+  const usd = parseFloat(input.value);
+  if (!usd || usd <= 0) { result.innerHTML = 'Ingresá un monto en USD'; return; }
+  const c = STATE.cryptos[currentModalIdx];
+  if (!c || !c.current_price) return;
+  const amount = usd / c.current_price;
+  const formatted = amount >= 1 ? amount.toFixed(4) : amount.toFixed(8);
+  result.innerHTML = `$${usd.toLocaleString('en-US')} USD = <span>${formatted} ${c.symbol.toUpperCase()}</span>`;
+}
+
+
+// ══ COMPARAR ══
+function populateCompareSelects() {
+  const selA = document.getElementById('compare-a');
+  const selB = document.getElementById('compare-b');
+  if (!selA || !selB || !STATE.cryptos.length) return;
+  const opts = STATE.cryptos.map(c => `<option value="${c.id}">${c.name} (${c.symbol.toUpperCase()})</option>`).join('');
+  selA.innerHTML = '<option value="">Cripto A</option>' + opts;
+  selB.innerHTML = '<option value="">Cripto B</option>' + opts;
+}
+
+function renderCompare() {
+  const idA = document.getElementById('compare-a')?.value;
+  const idB = document.getElementById('compare-b')?.value;
+  const el = document.getElementById('compare-result');
+  if (!el) return;
+  if (!idA || !idB) { el.innerHTML = '<div class="compare-coin-box" style="grid-column:1/-1;font-family:var(--font-mono);font-size:0.65rem;color:var(--muted)">Seleccioná dos criptos para comparar</div>'; return; }
+  if (idA === idB) { el.innerHTML = '<div class="compare-coin-box" style="grid-column:1/-1;font-family:var(--font-mono);font-size:0.65rem;color:var(--red)">Elegí dos criptos distintas</div>'; return; }
+
+  const cA = STATE.cryptos.find(c => c.id === idA);
+  const cB = STATE.cryptos.find(c => c.id === idB);
+  if (!cA || !cB) return;
+
+  const chgA = cA.price_change_percentage_24h || 0;
+  const chgB = cB.price_change_percentage_24h || 0;
+  const winnerA = chgA > chgB;
+  const winnerB = chgB > chgA;
+
+  el.innerHTML = `
+    <div class="compare-coin-box ${winnerA ? 'compare-winner' : ''}">
+      <div class="compare-coin-name">${cA.symbol.toUpperCase()}</div>
+      <div class="compare-coin-chg" style="color:${chgA >= 0 ? 'var(--green)' : 'var(--red)'}">${chgA >= 0 ? '+' : ''}${chgA.toFixed(2)}%</div>
+      <div class="compare-coin-price">${formatPrice(cA.current_price)}</div>
+      ${winnerA ? '<div style="font-size:0.6rem;color:var(--green);margin-top:4px;font-family:var(--font-mono)">GANADOR 24H</div>' : ''}
+    </div>
+    <div class="compare-coin-box ${winnerB ? 'compare-winner' : ''}">
+      <div class="compare-coin-name">${cB.symbol.toUpperCase()}</div>
+      <div class="compare-coin-chg" style="color:${chgB >= 0 ? 'var(--green)' : 'var(--red)'}">${chgB >= 0 ? '+' : ''}${chgB.toFixed(2)}%</div>
+      <div class="compare-coin-price">${formatPrice(cB.current_price)}</div>
+      ${winnerB ? '<div style="font-size:0.6rem;color:var(--green);margin-top:4px;font-family:var(--font-mono)">GANADOR 24H</div>' : ''}
+    </div>`;
+}
+
+
+// ══ MARKET SUBTABS ══
+const GITHUB_GAINERS_URL = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/gainers.json';
+const GITHUB_LOSERS_URL  = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/losers.json';
+
+let currentMarketTab = 'top';
+let gainersData = [];
+let losersData = [];
+
+async function switchMarketTab(tab, el) {
+  currentMarketTab = tab;
+  document.querySelectorAll('.market-subtab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  if (tab === 'top') {
+    renderCryptosList(STATE.cryptos);
+    return;
+  }
+
+  // Show loading
+  document.getElementById('crypto-list').innerHTML = '<div class="skeleton skel-card"></div><div class="skeleton skel-card"></div><div class="skeleton skel-card"></div>';
+
+  if (tab === 'gainers') {
+    if (!gainersData.length) gainersData = await fetchMarketTab(GITHUB_GAINERS_URL);
+    // Fallback: sort from existing data
+    if (!gainersData.length && STATE.cryptos.length) {
+      gainersData = [...STATE.cryptos].sort((a,b) => (b.price_change_percentage_24h||0) - (a.price_change_percentage_24h||0));
+    }
+    renderCryptosList(gainersData.filter(c => (c.price_change_percentage_24h||0) > 0));
+  } else {
+    if (!losersData.length) losersData = await fetchMarketTab(GITHUB_LOSERS_URL);
+    if (!losersData.length && STATE.cryptos.length) {
+      losersData = [...STATE.cryptos].sort((a,b) => (a.price_change_percentage_24h||0) - (b.price_change_percentage_24h||0));
+    }
+    renderCryptosList(losersData.filter(c => (c.price_change_percentage_24h||0) < 0));
+  }
+}
+
+async function fetchMarketTab(url) {
+  try {
+    const res = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data) && data.length > 0 ? data : [];
+  } catch(e) { return []; }
+}
+
+function renderCryptosList(cryptos) {
+  const list = document.getElementById('crypto-list');
+  if (!cryptos || !cryptos.length) {
+    list.innerHTML = '<div style="text-align:center;padding:30px;font-family:var(--font-mono);font-size:0.72rem;color:var(--muted)">Sin datos disponibles.</div>';
+    return;
+  }
+  list.innerHTML = cryptos.map((coin, i) => {
+    const chg = coin.price_change_percentage_24h || 0;
+    const cls = chg > 0 ? 'up' : chg < 0 ? 'down' : 'flat';
+    const arrow = chg > 0 ? '▲' : chg < 0 ? '▼' : '—';
+    const imgSrc = coin.image || '';
+    const idx = STATE.cryptos.findIndex(x => x.id === coin.id);
+    const modalIdx = idx >= 0 ? idx : i;
+    return `
+      <div class="crypto-card" onclick="openModal(${modalIdx})">
+        <div class="crypto-rank">${i+1}</div>
+        <div class="crypto-icon">
+          ${imgSrc ? `<img src="${imgSrc}" alt="${coin.symbol}" loading="lazy" onerror="this.style.display='none'">` : `<span class="crypto-icon-fallback">${coin.symbol.toUpperCase().slice(0,3)}</span>`}
+        </div>
+        <div class="crypto-info">
+          <div class="crypto-name">${coin.name}</div>
+          <div class="crypto-sym">${coin.symbol.toUpperCase()}</div>
+        </div>
+        <div class="crypto-right">
+          <div class="crypto-price">${formatPrice(coin.current_price)}</div>
+          <div class="crypto-change ${cls}">${arrow} ${Math.abs(chg).toFixed(2)}%</div>
+          ${Math.abs(chg) >= 10 ? `<div class="crypto-alert ${chg > 0 ? 'big-up' : 'big-down'}">${chg > 0 ? '🚀 +' : '💥 -'}${Math.abs(chg).toFixed(0)}%</div>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ══ DONATE ══
+function openDonate() {
+  document.getElementById('donate-modal').classList.add('open');
+}
+function closeDonate(e) {
+  if (!e || e.target === document.getElementById('donate-modal')) {
+    document.getElementById('donate-modal').classList.remove('open');
+  }
+}
+function copyUID() {
+  const uid = '143089741';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(uid).then(() => showCopied());
+  } else {
+    const el = document.createElement('textarea');
+    el.value = uid; document.body.appendChild(el);
+    el.select(); document.execCommand('copy');
+    document.body.removeChild(el); showCopied();
+  }
+}
+function showCopied() {
+  const btn = document.getElementById('copy-uid-btn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ Copiado';
+  btn.style.color = 'var(--green)';
+  btn.style.borderColor = 'var(--green)';
+  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+}
+
+// ══ PAGES ══
+function showPage(name, navEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (navEl) navEl.classList.add('active');
+  // Populate compare selects when switching to tendencias
+  if (name === 'tendencias' && STATE.cryptos.length) {
+    populateCompareSelects();
+  }
+}
+
+// ══ FORMAT ══
+function formatPrice(p) {
+  if (!p) return '—';
+  if (p >= 1) return '$' + p.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return '$' + p.toFixed(6);
+}
+function formatLarge(n) {
+  if (!n) return '—';
+  if (n >= 1e12) return '$' + (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  return '$' + n.toLocaleString();
+}
+</script>
+
+<!-- DONATE MODAL -->
+<div id="donate-modal" onclick="closeDonate(event)">
+  <div class="donate-sheet">
+    <div class="donate-handle"></div>
+    <div class="donate-title">☕ Invitanos un café</div>
+    <div class="donate-sub">Si la app te sirve, cualquier aporte nos ayuda a seguir mejorando. Sin presión — la app siempre es gratis.</div>
+    <div class="donate-qr-wrap">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=binancepay%3A143089741&bgcolor=ffffff&color=000000" alt="QR Binance Pay" onerror="this.style.display='none'">
+    </div>
+    <div class="donate-uid-row">
+      <div>
+        <div class="donate-uid-label">Binance UID</div>
+        <div class="donate-uid-num">143089741</div>
+      </div>
+      <button id="copy-uid-btn" onclick="copyUID()">Copiar UID</button>
+    </div>
+    <div class="donate-coins">
+      <div class="donate-coin primary">USDT</div>
+      <div class="donate-coin">BNB</div>
+      <div class="donate-coin">BTC</div>
+      <div class="donate-coin">ETH</div>
+    </div>
+    <div style="font-family:var(--font-mono);font-size:0.65rem;color:var(--muted);margin-bottom:16px;line-height:1.6;">
+      Abrí Binance → Pay → Enviar → buscar por UID<br>
+      o escaneá el QR desde la app de Binance.
+    </div>
+    <button class="donate-close" onclick="closeDonate()">CERRAR</button>
+    <div style="text-align:center;margin-top:14px">
+      <a href="mailto:msebastian.sn@gmail.com?subject=CryptoRadar%20Feedback" 
+         style="font-family:var(--font-mono);font-size:0.62rem;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--muted2);padding-bottom:1px;">
+        ¿Sugerencias? Escribinos
+      </a>
+    </div>
+  </div>
+</div>
+
+
+<!-- TÉRMINOS -->
+<div id="terms-modal">
+  <div class="terms-box">
+    <div class="terms-title">⚠️ Antes de empezar</div>
+    <div class="terms-body">
+      <strong>CryptoRadar</strong> es una aplicación <strong>informativa y lúdica</strong>. No opera con dinero real ni realiza transacciones de ningún tipo.<br><br>
+      Los precios y datos mostrados son <strong>orientativos</strong> y pueden no reflejar el valor exacto en tiempo real. No constituyen asesoramiento financiero.<br><br>
+      El simulador <strong>What If</strong> es un juego de escenarios hipotéticos sin ningún valor económico.<br><br>
+      La opción de "invitarnos un café" es completamente <strong>voluntaria</strong> y no otorga ningún beneficio adicional dentro de la app.
+    </div>
+    <button class="terms-accept" onclick="acceptTerms()">Entendido — Entrar</button>
+  </div>
+</div>
+
+
+<!-- INSTALL BANNER -->
+<div id="install-banner">
+  <div class="install-icon">📲</div>
+  <div class="install-text">
+    <div class="install-title">Instalá CryptoRadar</div>
+    <div class="install-sub">Usala como app · Gratis · Acceso rápido</div>
+  </div>
+  <button class="install-btn" onclick="installApp()">Instalar</button>
+  <button class="install-close" onclick="dismissInstallBanner()">×</button>
+</div>
+
+</body>
+</html>
