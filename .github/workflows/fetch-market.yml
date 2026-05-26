@@ -1,0 +1,30 @@
+name: Fetch Crypto Market Data
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch data
+        run: |
+          mkdir -p data
+          curl -s "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h" -o data/market.json
+          curl -s "https://api.alternative.me/fng/?limit=1" -o data/feargreed.json
+          curl -s "https://api.coingecko.com/api/v3/search/trending" -o data/trending.json
+          curl -s "https://api.coingecko.com/api/v3/global" -o data/global.json
+          curl -s "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=percent_change_24h_desc&per_page=20&page=1&sparkline=false&price_change_percentage=24h" -o data/gainers.json
+          curl -s "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=percent_change_24h_asc&per_page=20&page=1&sparkline=false&price_change_percentage=24h" -o data/losers.json
+      - name: Commit
+        run: |
+          git config user.name "cryptoradar-bot"
+          git config user.email "bot@cryptoradar"
+          git add data/
+          git diff --staged --quiet || git commit -m "data: update $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push
