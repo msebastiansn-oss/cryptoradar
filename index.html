@@ -70,6 +70,10 @@
   /* LAST UPDATE */
   .last-update { font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted2); margin-bottom: 10px; text-align: right; }
   .last-update span { color: var(--yellow); }
+  .app-refresh-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(255,214,0,0.35); background: rgba(255,214,0,0.08); color: var(--yellow); font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.15s, background 0.2s, color 0.2s; }
+  .app-refresh-btn:active { transform: rotate(45deg) scale(0.96); background: var(--yellow); color: #000; }
+  .app-refresh-btn.loading { animation: refreshspin 0.8s linear infinite; pointer-events: none; opacity: 0.75; }
+  @keyframes refreshspin { to { transform: rotate(360deg); } }
 
   /* FEAR & GREED */
   .fg-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px; }
@@ -499,6 +503,7 @@
     </div>
     <div class="header-right">
       <div class="fear-badge neutral" id="fear-badge">— —</div>
+      <button class="app-refresh-btn" id="app-refresh-btn" onclick="manualRefresh()" title="Actualizar app y datos">↻</button>
       <div class="user-avatar" id="user-avatar" onclick="showUserMenu()" title="Perfil">?</div>
     </div>
   </header>
@@ -923,6 +928,87 @@ async function fetchAll() {
   }
 }
 
+
+function fetchJsonFresh(url) {
+  return fetch(`${url}?v=${Date.now()}`, {
+    cache: 'reload',
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  }).then(res => {
+    if (!res.ok) throw new Error(`No se pudo leer ${url}`);
+    return res.json();
+  });
+}
+
+async function clearAppRuntimeCaches() {
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(key => caches.delete(key)));
+    }
+  } catch(e) {}
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg => reg.update().catch(() => null)));
+    }
+  } catch(e) {}
+}
+
+async function manualRefresh() {
+  document.querySelectorAll('.refresh-countdown').forEach(el => {
+    el.innerHTML = 'Actualizando datos...';
+  });
+
+  const btn = document.getElementById('manual-refresh-btn');
+  const originalText = btn ? btn.textContent : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '↻';
+    btn.style.opacity = '0.65';
+  }
+
+  try {
+    // IMPORTANTE:
+    // No se borra localStorage para conservar What If, favoritos, usuario, idioma y preferencias.
+    // Solo se fuerzan nuevamente las lecturas de JSON con cache-busting.
+    gainersData = [];
+    losersData = [];
+
+    await fetchAll();
+    await loadTrendingSection();
+
+    if (currentMarketTab === 'top') {
+      renderCryptosList(STATE.cryptos);
+    } else {
+      await switchMarketTab(currentMarketTab, document.getElementById('subtab-' + currentMarketTab));
+    }
+
+    renderFavs();
+    renderWhatIf();
+    if (typeof renderWhatIfHistory === 'function') renderWhatIfHistory();
+    if (typeof populateCompareSelects === 'function') populateCompareSelects();
+    if (typeof renderCompare === 'function') renderCompare();
+
+    nextUpdateAt = Date.now() + REFRESH_INTERVAL_MS;
+    updateRefreshCountdown();
+    clearOfflineMessage();
+  } catch(e) {
+    console.error(e);
+    setOfflineMessage('📡 No se pudo actualizar — se mantienen los últimos datos guardados');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText || '↻';
+      btn.style.opacity = '';
+    }
+  }
+}
+
 async function loadTrendingSection() {
   const trending = await loadTrendingFromGitHub();
   const global = await loadGlobalFromGitHub();
@@ -954,8 +1040,8 @@ async function loadTrendingSection() {
 }
 
 // ══ CRYPTOS ══
-const GITHUB_MARKET_URL = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/market.json';
-const GITHUB_FG_URL     = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/feargreed.json';
+const GITHUB_MARKET_URL = './data/market.json';
+const GITHUB_FG_URL     = './data/feargreed.json';
 const COINGECKO_URL     = 'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h';
 const ALTME_FG_URL      = 'https://api.alternative.me/fng/?limit=1';
 
@@ -1002,7 +1088,7 @@ async function fetchCryptos() {
     // 1ro: intenta leer el JSON cacheado de GitHub (una sola fuente para todos los usuarios)
     let data = null;
     try {
-      const res = await fetch(GITHUB_MARKET_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      const res = await fetch(`${GITHUB_MARKET_URL}?v=${Date.now()}`, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json) && json.length > 0) data = json;
@@ -1114,7 +1200,7 @@ async function fetchFearGreed() {
     let data = null;
     // 1ro: intenta desde GitHub cache
     try {
-      const res = await fetch(GITHUB_FG_URL + '?t=' + Date.now(), { cache: 'no-store' });
+      const res = await fetch(`${GITHUB_FG_URL}?v=${Date.now()}`, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
       if (res.ok) data = await res.json();
     } catch(e) {}
     // 2do: fallback directo
@@ -1183,7 +1269,7 @@ function renderFearGreedFallback() {
 // ══ TENDENCIAS ══
 async function loadTrendingFromGitHub() {
   try {
-    const res = await fetch('https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/trending.json?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch('./data/trending.json?v=' + Date.now(), { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.coins ? data.coins.slice(0, 5) : null;
@@ -1192,7 +1278,7 @@ async function loadTrendingFromGitHub() {
 
 async function loadGlobalFromGitHub() {
   try {
-    const res = await fetch('https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/global.json?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch('./data/global.json?v=' + Date.now(), { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
     if (!res.ok) return null;
     const data = await res.json();
     return data.data || null;
@@ -2419,8 +2505,8 @@ function renderCompare() {
 
 
 // ══ MARKET SUBTABS ══
-const GITHUB_GAINERS_URL = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/gainers.json';
-const GITHUB_LOSERS_URL  = 'https://raw.githubusercontent.com/msebastiansn-oss/cryptoradar/main/data/losers.json';
+const GITHUB_GAINERS_URL = './data/gainers.json';
+const GITHUB_LOSERS_URL  = './data/losers.json';
 
 let currentMarketTab = 'top';
 let gainersData = [];
@@ -2457,7 +2543,7 @@ async function switchMarketTab(tab, el) {
 
 async function fetchMarketTab(url) {
   try {
-    const res = await fetch(url + '?t=' + Date.now(), { cache: 'no-store' });
+    const res = await fetch(`${url}?v=${Date.now()}`, { cache: 'reload', headers: { 'Cache-Control': 'no-cache' } });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) && data.length > 0 ? data : [];
