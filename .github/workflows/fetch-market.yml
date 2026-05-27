@@ -21,21 +21,21 @@ jobs:
         run: |
           mkdir -p data
 
-          curl -L --fail --max-time 30 --retry 2 --retry-delay 5 -s \
-            "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h" \
-            -o data/market.json
+          curl -L --fail --silent --show-error \
+          "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=40&page=1&sparkline=false&price_change_percentage=24h" \
+          -o data/market.json || echo "market failed"
 
-          curl -L --fail --max-time 30 --retry 2 --retry-delay 5 -s \
-            "https://api.alternative.me/fng/?limit=1" \
-            -o data/feargreed.json
+          curl -L --fail --silent --show-error \
+          "https://api.alternative.me/fng/?limit=1" \
+          -o data/feargreed.json || echo "feargreed failed"
 
-          curl -L --fail --max-time 30 --retry 2 --retry-delay 5 -s \
-            "https://api.coingecko.com/api/v3/search/trending" \
-            -o data/trending.json
+          curl -L --fail --silent --show-error \
+          "https://api.coingecko.com/api/v3/search/trending" \
+          -o data/trending.json || echo "trending failed"
 
-          curl -L --fail --max-time 30 --retry 2 --retry-delay 5 -s \
-            "https://api.coingecko.com/api/v3/global" \
-            -o data/global.json
+          curl -L --fail --silent --show-error \
+          "https://api.coingecko.com/api/v3/global" \
+          -o data/global.json || echo "global failed"
 
       - name: Generate gainers and losers
         run: |
@@ -72,9 +72,15 @@ jobs:
         run: |
           git config user.name "cryptoradar-bot"
           git config user.email "bot@cryptoradar.local"
+
           git add data/
-          git diff --staged --quiet || git commit -m "data: update"
-          git push
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "data: update"
+            git push
+          fi
 
       - name: Esperar 15 minutos y relanzar
         env:
